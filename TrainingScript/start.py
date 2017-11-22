@@ -27,7 +27,7 @@ fingerprintsPerPoint = -1;
 requestedLocations = -1;
 
 client = mqtt.Client("ivan", clean_session=True, userdata=None, protocol=mqtt.MQTTv31)
-
+client.username_pw_set("student", "cv1Dq6GXL9cqsStSHKp5")
 analyze_timeout = 10
 last_timestamp = 0;
 filling_rssi_list = [];
@@ -152,6 +152,7 @@ def takeFingerprint():
         fingerprint.update({"gateway"+str(idx) : rssi})
     data.append(fingerprint);
     sys.stdout.write(bcolors.OKBLUE+"\n");
+    
 
 
 
