@@ -8,6 +8,7 @@ import paho.mqtt.client as mqtt
 import json
 import numpy
 import time
+import requests
 from operator import itemgetter
 
 node_id = "43373134003e0041"
@@ -100,6 +101,10 @@ while (True):
         time.sleep(0.1)
     print (current_reading)
     print ("location is:"+str(calculate_location(current_reading)))
+    url = "http://thingsboard.idlab.uantwerpen.be:8080/api/v1/Zw3jC2MF6Tl9uFtqwptY/attributes"
+    data = {'xPos': calculate_location(current_reading)}
+    headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+    r = requests.post(url, data=json.dumps(data), headers=headers)
     time.sleep(2)
 
 
