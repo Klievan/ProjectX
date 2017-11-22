@@ -15,7 +15,7 @@ node_id = "43373134003e0041"
 gateways = {"f1f7e740-b8b0-11e7-bebc-85e6dd10a2e8": "AP1", "43e01b20-b967-11e7-bebc-85e6dd10a2e8": "AP2", "b6b48ad0-b95a-11e7-bebc-85e6dd10a2e8": "AP3", "c2c4ebd0-b95a-11e7-bebc-85e6dd10a2e8": "AP4"}
 current_reading = [0]*4;#[link_budget_A, link_budget_B, link_budget_C]
 fingerprint_gateway_indiches = {"AP1": 0, "AP2": 1, "AP3": 2, "AP4": 3}
-amount_of_locations = 8
+amount_of_locations = 93
 readings_by_location = [[] for i in range(amount_of_locations)]
 k = 3
 
@@ -80,7 +80,7 @@ def read_training_data():
     for j in range(0, amount_of_locations):
         for i in range(0, len(training_database)):
             if j == training_database[i]["location"]:
-                readings_by_location[j].append([training_database[i]["gateway0"], training_database[i]["gateway1"], training_database[i]["gateway2"]])
+                readings_by_location[j].append([training_database[i]["gateway0"], training_database[i]["gateway1"], training_database[i]["gateway2"], training_database[i]["gateway3"]])
 
 #defining some MQTT parameters
 client = mqtt.Client(protocol=mqtt.MQTTv31)
