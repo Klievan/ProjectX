@@ -32,7 +32,6 @@ def on_message(client, userdata, msg):
     msg_payload = str(msg.payload)# convert msg.payload to string for further use
     if json.loads(msg_payload)["node"] == node_id:# Only process messages from our own node
         # first determine the index of the "current_reading" variable
-        print json.loads(msg_payload)
         fingerprint_gateway_index = fingerprint_gateway_indiches[gateways[json.loads(msg_payload)["gateway"]]]
         # once determined, store the link budget of the message in the appropriate location within "current_reading"
         link_budget = json.loads(msg_payload)["link_budget"]
@@ -53,13 +52,11 @@ def calculate_location(current_reading):
     for i in range(0, amount_of_locations):
         for j in range (0, len(readings_by_location[i])):
             temp[i].append(numpy.linalg.norm(numpy.subtract(numpy.asarray(readings_by_location[i][j], dtype=int ), numpy.asarray(current_reading, dtype = int)), axis=0))
-    print(temp)
     for i in range(0, len(temp)):
         for j in range(0, len(temp[i])):
             distance_tuple_list.append((i, temp[i][j]))
     # sorts based on the comparison metric column.
     distance_tuple_list.sort(key=itemgetter(1))
-    print distance_tuple_list
 
     location_count = [0 for i in range(amount_of_locations)]
     for i in range(0, k):
@@ -67,7 +64,6 @@ def calculate_location(current_reading):
             if distance_tuple_list[i][0] == j:
                 location_count[j] += 1
     # by definition of kNN, the nearest location is the location with the highest location count.
-    print location_count
     return location_count.index(max(location_count))
 
 # reads the trainingdata. This is however unsorted and just contains all the measurements.
@@ -95,6 +91,7 @@ client.loop_start()
 read_training_data()
 while (True):
     timeout = time.time() + 5
+    current_reading = [0]*4
     while time.time() < timeout:
         if isFull(current_reading):
             break
@@ -102,7 +99,7 @@ while (True):
     print (current_reading)
     print ("location is:"+str(calculate_location(current_reading)))
     url = "http://thingsboard.idlab.uantwerpen.be:8080/api/v1/Zw3jC2MF6Tl9uFtqwptY/attributes"
-    data = {'xPos': calculate_location(current_reading)}
+    data = {'xPos': calculate_location(current_reading), 'budgetA': current_reading[0], 'budgetB': current_reading[1], 'budgetC': current_reading[2], 'budgetD': current_reading[3], }
     headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
     r = requests.post(url, data=json.dumps(data), headers=headers)
     time.sleep(2)
