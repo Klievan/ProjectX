@@ -97,11 +97,18 @@ while (True):
             break
         time.sleep(0.1)
     print (current_reading)
-    print ("location is:"+str(calculate_location(current_reading)))
-    url = "http://thingsboard.idlab.uantwerpen.be:8080/api/v1/Zw3jC2MF6Tl9uFtqwptY/attributes"
-    data = {'xPos': calculate_location(current_reading), 'budgetA': current_reading[0], 'budgetB': current_reading[1], 'budgetC': current_reading[2], 'budgetD': current_reading[3], }
-    headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-    r = requests.post(url, data=json.dumps(data), headers=headers)
+    zerocount = 0
+    for i in len(current_reading):
+        if current_reading[i] == 0:
+            zerocount += 1
+    if zerocount > 1:
+        print ("More than 1 reading is 0, disregard reading")
+    else:
+        print ("location is:"+str(calculate_location(current_reading)))
+        url = "http://thingsboard.idlab.uantwerpen.be:8080/api/v1/Zw3jC2MF6Tl9uFtqwptY/attributes"
+        data = {'xPos': calculate_location(current_reading), 'budgetA': current_reading[0], 'budgetB': current_reading[1], 'budgetC': current_reading[2], 'budgetD': current_reading[3], }
+        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+        r = requests.post(url, data=json.dumps(data), headers=headers)
     time.sleep(2)
 
 
