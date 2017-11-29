@@ -15,9 +15,10 @@ class bcolors:
     ENDC = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
+    STRIKETHROUGH = '\0336'
 
 
-gateways = [];
+gateways = ["f1f7e740-b8b0-11e7-bebc-85e6dd10a2e8","43e01b20-b967-11e7-bebc-85e6dd10a2e8","b6b48ad0-b95a-11e7-bebc-85e6dd10a2e8","c2c4ebd0-b95a-11e7-bebc-85e6dd10a2e8"];
 nodes = [];
 
 MESSAGE_INTERVAL_TIMEOUT = 500;
@@ -132,7 +133,7 @@ def takeFingerprint():
     global filling_rssi_list
     for index, gateway in enumerate(gateways):
         filling_rssi_list[index] = 0;
-    timeout = time.time() + 5
+    timeout = time.time() + 10
     while time.time() < timeout:
         sys.stdout.write('\r' + bcolors.OKBLUE)
         for rssi in filling_rssi_list:
@@ -147,10 +148,18 @@ def takeFingerprint():
     fingerprint = {"id": fingerprintid,
                    "location": currentLocation,
                    }
-    fingerprintid += 1;
+    hasnull = 0;
     for idx,rssi in enumerate(filling_rssi_list):
         fingerprint.update({"gateway"+str(idx) : rssi})
-    data.append(fingerprint);
+        if rssi == 0:
+            hasnull = 1
+
+    if hasnull == 0:
+        fingerprintid += 1;
+        data.append(fingerprint);
+    else:
+        print(bcolors.FAIL +" - Discarded" + bcolors.ENDC)
+        takeFingerprint()
     sys.stdout.write(bcolors.OKBLUE+"\n");
     
 
@@ -196,6 +205,8 @@ for x in range(0, requestedLocations):
     print bcolors.BOLD+bcolors.OKGREEN + "\nFingerprinting location "+str(1+currentLocation) + "/" + str(requestedLocations) + bcolors.ENDC;
     for x in range(0, fingerprintsPerPoint):
         takeFingerprint()
+        with open('data.json', 'w') as outfile:
+            json.dump(data, outfile)
     currentLocation += 1
     if currentLocation < requestedLocations:
         print bcolors.BOLD + bcolors.OKGREEN + "\nDone! Press enter to take next fingerprint..." + bcolors.ENDC;
