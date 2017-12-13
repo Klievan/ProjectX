@@ -41,20 +41,31 @@
 #include "stm32l1xx_hal.h"
 
 /* USER CODE BEGIN Includes */
-
+#include <string.h>
+#include <stdio.h>
+#include <math.h>
+#include "enumerations.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
 I2C_HandleTypeDef hi2c1;
 
-TIM_HandleTypeDef htim6;
+RTC_HandleTypeDef hrtc;
 
 UART_HandleTypeDef huart4;
 UART_HandleTypeDef huart5;
+UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-
+static uint8_t ender[] = {0x0D,0x0A};
+static uint8_t rawSensorData[5];
+static int64_t pressureRaw = 0;
+static int16_t pressure = 0;
+static int64_t temperatureRaw = 0;
+static int16_t temperature = 0;
+static uint8_t controlRegisterSetting[] = {0x10};
+static char msg[128] = {[0 ... 127] = '\0'};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -63,11 +74,12 @@ static void MX_GPIO_Init(void);
 static void MX_UART4_Init(void);
 static void MX_UART5_Init(void);
 static void MX_I2C1_Init(void);
-static void MX_TIM6_Init(void);
+static void MX_USART2_UART_Init(void);
+static void MX_RTC_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
-
+int64_t twosComplementToSignedInteger(uint32_t rawValue,SignBitIndex sbi);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -102,10 +114,12 @@ int main(void)
   MX_UART4_Init();
   MX_UART5_Init();
   MX_I2C1_Init();
-  MX_TIM6_Init();
+  MX_USART2_UART_Init();
+  MX_RTC_Init();
 
   /* USER CODE BEGIN 2 */
-
+  HAL_I2C_Mem_Write(&hi2c1,0xBA,0x10,I2C_MEMADD_SIZE_8BIT,controlRegisterSetting,1,HAL_MAX_DELAY);
+  while(HAL_I2C_IsDeviceReady(&hi2c1,0xBA,1,HAL_MAX_DELAY) != HAL_OK);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -115,7 +129,25 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
+	  HAL_I2C_Mem_Read(&hi2c1,0xBA,0x28,I2C_MEMADD_SIZE_8BIT,rawSensorData,5,HAL_MAX_DELAY);
 
+	  uint32_t pressureTwosComplement = (rawSensorData[2] << 16) | (rawSensorData[1] << 8) | rawSensorData[0];
+	  pressureRaw = twosComplementToSignedInteger(pressureTwosComplement,TWOS_COMPLEMENT_24_BIT);
+	  pressure = (int16_t)(pressureRaw/410);
+	  sprintf(msg,"%d µbar",pressure);
+	  HAL_UART_Transmit(&huart2,(uint8_t *)msg,21,HAL_MAX_DELAY);
+	  HAL_UART_Transmit(&huart2,ender,2,HAL_MAX_DELAY);
+
+	  uint32_t temperatureTwosComplement = (rawSensorData[4] << 8) | rawSensorData[3];
+	  temperatureRaw = twosComplementToSignedInteger(temperatureTwosComplement,TWOS_COMPLEMENT_16_BIT);
+	  temperature = (int16_t)(temperatureRaw/100);
+	  for (uint16_t i = 0; i < (sizeof(msg)/sizeof(msg[0])); ++i)
+		  msg[i] = '\0';
+	  sprintf(msg,"%d °C",temperature);
+	  HAL_UART_Transmit(&huart2,(uint8_t *)msg,21,HAL_MAX_DELAY);
+	  HAL_UART_Transmit(&huart2,ender,2,HAL_MAX_DELAY);
+
+	  HAL_Delay(2000);
   }
   /* USER CODE END 3 */
 
@@ -128,6 +160,7 @@ void SystemClock_Config(void)
 
   RCC_OscInitTypeDef RCC_OscInitStruct;
   RCC_ClkInitTypeDef RCC_ClkInitStruct;
+  RCC_PeriphCLKInitTypeDef PeriphClkInit;
 
     /**Configure the main internal regulator output voltage 
     */
@@ -135,7 +168,8 @@ void SystemClock_Config(void)
 
     /**Initializes the CPU, AHB and APB busses clocks 
     */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_MSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_MSI;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.MSIState = RCC_MSI_ON;
   RCC_OscInitStruct.MSICalibrationValue = 0;
   RCC_OscInitStruct.MSIClockRange = RCC_MSIRANGE_5;
@@ -155,6 +189,13 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_RTC;
+  PeriphClkInit.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
@@ -191,24 +232,55 @@ static void MX_I2C1_Init(void)
 
 }
 
-/* TIM6 init function */
-static void MX_TIM6_Init(void)
+/* RTC init function */
+static void MX_RTC_Init(void)
 {
 
-  TIM_MasterConfigTypeDef sMasterConfig;
+  RTC_TimeTypeDef sTime;
+  RTC_DateTypeDef sDate;
 
-  htim6.Instance = TIM6;
-  htim6.Init.Prescaler = 0;
-  htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim6.Init.Period = 0;
-  if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
+    /**Initialize RTC Only 
+    */
+  hrtc.Instance = RTC;
+  hrtc.Init.HourFormat = RTC_HOURFORMAT_24;
+  hrtc.Init.AsynchPrediv = 127;
+  hrtc.Init.SynchPrediv = 255;
+  hrtc.Init.OutPut = RTC_OUTPUT_DISABLE;
+  hrtc.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
+  hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
+  if (HAL_RTC_Init(&hrtc) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
 
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim6, &sMasterConfig) != HAL_OK)
+    /**Initialize RTC and set the Time and Date 
+    */
+  if(HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR0) != 0x32F2){
+  sTime.Hours = 0x0;
+  sTime.Minutes = 0x0;
+  sTime.Seconds = 0x0;
+  sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
+  sTime.StoreOperation = RTC_STOREOPERATION_RESET;
+  if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BCD) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  sDate.WeekDay = RTC_WEEKDAY_MONDAY;
+  sDate.Month = RTC_MONTH_JANUARY;
+  sDate.Date = 0x1;
+  sDate.Year = 0x0;
+
+  if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BCD) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+    HAL_RTCEx_BKUPWrite(&hrtc,RTC_BKP_DR0,0x32F2);
+  }
+    /**Enable the WakeUp 
+    */
+  if (HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, 23125, RTC_WAKEUPCLOCK_RTCCLK_DIV16) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
@@ -253,14 +325,31 @@ static void MX_UART5_Init(void)
 
 }
 
+/* USART2 init function */
+static void MX_USART2_UART_Init(void)
+{
+
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 115200;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_HalfDuplex_Init(&huart2) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+}
+
 /** Configure pins as 
         * Analog 
         * Input 
         * Output
         * EVENT_OUT
         * EXTI
-     PA2   ------> USART2_TX
-     PA3   ------> USART2_RX
 */
 static void MX_GPIO_Init(void)
 {
@@ -279,14 +368,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : USART_TX_Pin USART_RX_Pin */
-  GPIO_InitStruct.Pin = USART_TX_Pin|USART_RX_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF7_USART2;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI0_IRQn);
@@ -297,7 +378,24 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+int64_t twosComplementToSignedInteger(uint32_t rawValue,SignBitIndex sbi) {
+	switch (sbi) {
+		case TWOS_COMPLEMENT_24_BIT:
+		{
+			if ((rawValue & 0x00800000) == 0)
+				return (rawValue & 0x00FFFFFF);
+			return ((int64_t)(~((rawValue & 0x00FFFFFF) - 1))) * -1;
+		}
+		case TWOS_COMPLEMENT_16_BIT:
+		{
+			if ((rawValue & 0x00008000) == 0)
+				return (rawValue & 0x0000FFFF);
+			return ((int64_t)(~((rawValue & 0x0000FFFF) - 1))) * -1;
+		}
+		default:
+			return NAN;
+	}
+}
 /* USER CODE END 4 */
 
 /**

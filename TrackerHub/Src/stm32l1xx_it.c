@@ -40,7 +40,7 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
-extern TIM_HandleTypeDef htim6;
+extern RTC_HandleTypeDef hrtc;
 extern UART_HandleTypeDef huart4;
 
 /******************************************************************************/
@@ -70,6 +70,20 @@ void SysTick_Handler(void)
 /******************************************************************************/
 
 /**
+* @brief This function handles RTC wake-up interrupt through EXTI line 20.
+*/
+void RTC_WKUP_IRQHandler(void)
+{
+  /* USER CODE BEGIN RTC_WKUP_IRQn 0 */
+
+  /* USER CODE END RTC_WKUP_IRQn 0 */
+  HAL_RTCEx_WakeUpTimerIRQHandler(&hrtc);
+  /* USER CODE BEGIN RTC_WKUP_IRQn 1 */
+
+  /* USER CODE END RTC_WKUP_IRQn 1 */
+}
+
+/**
 * @brief This function handles EXTI line0 interrupt.
 */
 void EXTI0_IRQHandler(void)
@@ -95,20 +109,6 @@ void EXTI1_IRQHandler(void)
   /* USER CODE BEGIN EXTI1_IRQn 1 */
 
   /* USER CODE END EXTI1_IRQn 1 */
-}
-
-/**
-* @brief This function handles TIM6 global interrupt.
-*/
-void TIM6_IRQHandler(void)
-{
-  /* USER CODE BEGIN TIM6_IRQn 0 */
-
-  /* USER CODE END TIM6_IRQn 0 */
-  HAL_TIM_IRQHandler(&htim6);
-  /* USER CODE BEGIN TIM6_IRQn 1 */
-
-  /* USER CODE END TIM6_IRQn 1 */
 }
 
 /**
