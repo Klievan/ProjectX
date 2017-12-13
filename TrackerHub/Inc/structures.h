@@ -21,4 +21,10 @@ typedef struct {
 	int32_t temperature;
 } BarometerData;
 
+typedef struct {
+	int32_t xValue;
+	int32_t yValue;
+	int32_t zValue;
+} MagnetometerData;
+
 #endif /* STRUCTURES_H_ */

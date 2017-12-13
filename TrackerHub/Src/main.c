@@ -61,9 +61,7 @@ UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-static uint8_t rawSensorData[5];
 static volatile uint8_t TRANSMITTING = 0;
-static uint8_t BAROMETER_CTRL_REG[] = {0x10};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -81,6 +79,9 @@ static int64_t twosComplementToSignedInteger(uint32_t rawValue,SignBitIndex sbi)
 static uint8_t unsolicitedResponseTX(uint8_t* data, uint8_t dataLength);
 static UnsolicitedResponseTail buildTail(UnsolicitedResponseType urt);
 static BarometerData getBarometerData();
+static MagnetometerData getMagnetometerData();
+static void get_m_axes(int32_t *pData);
+static void get_m_axes_raw(int16_t *pData);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -120,8 +121,17 @@ int main(void)
 
   /* USER CODE BEGIN 2 */
   HAL_PWREx_EnableLowPowerRunMode();
-  HAL_I2C_Mem_Write(&hi2c1,0xBA,0x10,I2C_MEMADD_SIZE_8BIT,BAROMETER_CTRL_REG,1,HAL_MAX_DELAY);
-  while(HAL_I2C_IsDeviceReady(&hi2c1,0xBA,1,HAL_MAX_DELAY) != HAL_OK);
+
+  HAL_I2C_Mem_Write(&hi2c1,LPS22HB_ADDRESS,LPS22HB_CTRL_REG1,I2C_MEMADD_SIZE_8BIT,0x10,1,HAL_MAX_DELAY);
+  while(HAL_I2C_IsDeviceReady(&hi2c1,LPS22HB_ADDRESS,1,HAL_MAX_DELAY) != HAL_OK);
+
+  HAL_I2C_Mem_Write(&hi2c1,LSM303_MAG_ADDRESS,LSM303_CFG_REG_A_M,I2C_MEMADD_SIZE_8BIT,0x00,1,HAL_MAX_DELAY);
+  while (HAL_I2C_IsDeviceReady(&hi2c1,LSM303_MAG_ADDRESS,1,HAL_MAX_DELAY) != HAL_OK);
+
+  HAL_I2C_Mem_Write(&hi2c1,LSM303_MAG_ADDRESS,LSM303_CFG_REG_C_M,I2C_MEMADD_SIZE_8BIT,0x01,1,HAL_MAX_DELAY);
+  while (HAL_I2C_IsDeviceReady(&hi2c1,LSM303_MAG_ADDRESS,1,HAL_MAX_DELAY) != HAL_OK);
+
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -136,6 +146,8 @@ int main(void)
 		  UnsolicitedResponseTail tail = buildTail(FLOOD_FRAME);
 		  unsolicitedResponseTX(tail.data,tail.dataLength);
 		  tail = buildTail(BAROMETER_FRAME);
+		  unsolicitedResponseTX(tail.data,tail.dataLength);
+		  tail = buildTail(MAGNETOMETER_FRAME);
 		  unsolicitedResponseTX(tail.data,tail.dataLength);
 		  TRANSMITTING = 0;
 	  }
@@ -452,7 +464,9 @@ static UnsolicitedResponseTail buildTail(UnsolicitedResponseType urt) {
 	uint8_t* data = (uint8_t*) malloc((MESSAGE_MAX_LEN - sizeof(UNSOLICITED_RESPONSE_BASE)) * sizeof(uint8_t));
 	uint8_t dataLength = 0;
 	UnsolicitedResponseTail tail = {data,dataLength};
+	int32_t magData[3];
 	BarometerData barometerData;
+	MagnetometerData magnetometerData;
 
 	switch (urt) {
 		case FLOOD_FRAME:
@@ -468,6 +482,15 @@ static UnsolicitedResponseTail buildTail(UnsolicitedResponseType urt) {
 			dataLength = sizeof(barometerData.pressure);
 			realloc(data,dataLength);
 			memcpy(data,&barometerData.pressure,dataLength);
+			break;
+		case MAGNETOMETER_FRAME:
+			magnetometerData = getMagnetometerData();
+			magData[0] = magnetometerData.xValue;
+			magData[1] = magnetometerData.yValue;
+			magData[2] = magnetometerData.zValue;
+			dataLength = sizeof(magData)/sizeof(magData[0]);
+			realloc(data,dataLength);
+			memcpy(data,magData,dataLength);
 			break;
 		default:
 			break;
@@ -497,6 +520,7 @@ int64_t twosComplementToSignedInteger(uint32_t rawValue,SignBitIndex sbi) {
 }
 
 static BarometerData getBarometerData() {
+	uint8_t rawSensorData[5];
 	BarometerData barometerData;
 	HAL_I2C_Mem_Read(&hi2c1,0xBA,0x28,I2C_MEMADD_SIZE_8BIT,rawSensorData,5,HAL_MAX_DELAY);
 
@@ -509,6 +533,57 @@ static BarometerData getBarometerData() {
 	barometerData.temperature = (int32_t)(temperatureRaw/100);
 
 	return barometerData;
+}
+
+static MagnetometerData getMagnetometerData() {
+	int32_t axes_m[3];
+	get_m_axes(axes_m);
+	MagnetometerData magnetoMeterData;
+	magnetoMeterData.xValue = axes_m[0];
+	magnetoMeterData.yValue = axes_m[1];
+	magnetoMeterData.zValue = axes_m[2];
+	return magnetoMeterData;
+}
+
+/**
+ * @brief  Read raw data from LSM303AGR Magnetometer
+ * @param  pData the pointer where the magnetomer raw data are stored
+ */
+static void get_m_axes(int32_t *pData) {
+	int16_t pDataRaw[3];
+	float sensitivity = 1.5;
+
+	/* Read raw data from LSM303AGR output register. */
+	get_m_axes_raw(pDataRaw);
+
+	/* Calculate the data. */
+	pData[0] = (int32_t) (pDataRaw[0] * sensitivity);
+	pData[1] = (int32_t) (pDataRaw[1] * sensitivity);
+	pData[2] = (int32_t) (pDataRaw[2] * sensitivity);
+}
+
+/**
+ * @brief  Read raw data from LSM303AGR Magnetometer
+ * @param  pData the pointer where the magnetomer raw data are stored
+ */
+void get_m_axes_raw(int16_t *pData) {
+	uint8_t regValue[6] = {[0 ... 5] = 0};
+	int16_t *regValueInt16;
+
+	/* Read output registers from LSM303AGR_MAG_OUTX_L to LSM303AGR_MAG_OUTZ_H. */
+	HAL_I2C_Mem_Read(&hi2c1,LSM303_MAG_ADDRESS,OUTX_L_REG_M,I2C_MEMADD_SIZE_8BIT,&regValue[0],1,100);
+	HAL_I2C_Mem_Read(&hi2c1,LSM303_MAG_ADDRESS,OUTX_H_REG_M,I2C_MEMADD_SIZE_8BIT,&regValue[1],1,100);
+	HAL_I2C_Mem_Read(&hi2c1,LSM303_MAG_ADDRESS,OUTY_L_REG_M,I2C_MEMADD_SIZE_8BIT,&regValue[2],1,100);
+	HAL_I2C_Mem_Read(&hi2c1,LSM303_MAG_ADDRESS,OUTY_H_REG_M,I2C_MEMADD_SIZE_8BIT,&regValue[3],1,100);
+	HAL_I2C_Mem_Read(&hi2c1,LSM303_MAG_ADDRESS,OUTZ_L_REG_M,I2C_MEMADD_SIZE_8BIT,&regValue[4],1,100);
+	HAL_I2C_Mem_Read(&hi2c1,LSM303_MAG_ADDRESS,OUTZ_H_REG_M,I2C_MEMADD_SIZE_8BIT,&regValue[5],1,100);
+
+	regValueInt16 = (int16_t *)regValue;
+
+	/* Format the data. */
+	pData[0] = regValueInt16[0];
+	pData[1] = regValueInt16[1];
+	pData[2] = regValueInt16[2];
 }
 
 void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc) {
