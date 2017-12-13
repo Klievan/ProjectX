@@ -82,6 +82,8 @@ static BarometerData getBarometerData();
 static MagnetometerData getMagnetometerData();
 static void get_m_axes(int32_t *pData);
 static void get_m_axes_raw(int16_t *pData);
+static void get_a_axes(int32_t *pData);
+static void get_a_axes_raw(int16_t *pData);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -585,6 +587,28 @@ void get_m_axes_raw(int16_t *pData) {
 	pData[0] = regValueInt16[0];
 	pData[1] = regValueInt16[1];
 	pData[2] = regValueInt16[2];
+}
+
+void get_a_axes(int32_t *pData) {
+	int16_t pDataRaw[3];
+
+	LSM303AGR_ACC_Get_Raw_Acceleration(pDataRaw);
+
+	pData[0] = ((pDataRaw[0] >> 6) * 3900 + 500) / 1000;
+	pData[1] = ((pDataRaw[1] >> 6) * 3900 + 500) / 1000;
+	pData[2] = ((pDataRaw[2] >> 6) * 3900 + 500) / 1000;
+}
+
+void get_a_axes_raw(int16_t *pData) {
+	uint8_t regValue[6] = { 0, 0, 0, 0, 0, 0 };
+	int16_t *regValueInt16;
+
+	/*HAL_I2C_Mem_Read(&hi2c1,LSM303_ACC_ADDRESS,LSM303_ACC_X_L_A_MULTI_READ,1,Data,6,100);
+	HAL_UART_Transmit(&huart2,Data,6,HAL_MAX_DELAY);
+
+	Xaxis = ((Data[1] << 8) | Data[0]);
+	Yaxis = ((Data[3] << 8) | Data[2]);
+	Zaxis = ((Data[5] << 8) | Data[4]);*/
 }
 
 void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc) {
