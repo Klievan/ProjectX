@@ -122,6 +122,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
   HAL_PWREx_EnableLowPowerRunMode();
 
+  // set barometer ODR to 1Hz
   HAL_I2C_Mem_Write(&hi2c1,LPS22HB_ADDRESS,LPS22HB_CTRL_REG1,I2C_MEMADD_SIZE_8BIT,0x10,1,HAL_MAX_DELAY);
   while(HAL_I2C_IsDeviceReady(&hi2c1,LPS22HB_ADDRESS,1,HAL_MAX_DELAY) != HAL_OK);
 
