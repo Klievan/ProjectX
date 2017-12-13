@@ -396,6 +396,10 @@ int64_t twosComplementToSignedInteger(uint32_t rawValue,SignBitIndex sbi) {
 			return NAN;
 	}
 }
+
+void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc) {
+
+}
 /* USER CODE END 4 */
 
 /**
