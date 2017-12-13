@@ -13,4 +13,10 @@ typedef enum {
 	TWOS_COMPLEMENT_16_BIT = 16,
 } SignBitIndex;
 
+typedef enum {
+	FLOOD_FRAME,
+	COMPASS_FRAME,
+	BAROMETER_FRAME,
+} UnsolicitedResponseType;
+
 #endif /* ENUMERATIONS_H_ */
