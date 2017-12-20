@@ -39,6 +39,7 @@
 
 const uint8_t MESSAGE_MAX_LEN = 255;
 const uint8_t FLOOD_TAIL[] = {0x6B,0x61,0x6B,0x61};
+const uint8_t TAIL_SEPARATOR = 0x3B;
 
 const uint32_t LSM303_ACC_Sensitivity_List[3][4] = {
 		/* HR 12-bit */

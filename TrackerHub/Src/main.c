@@ -78,6 +78,7 @@ static void MX_USART1_UART_Init(void);
 static int64_t twosComplementToSignedInteger(uint32_t rawValue,SignBitIndex sbi);
 static uint8_t unsolicitedResponseTX(uint8_t* data, uint8_t dataLength);
 static UnsolicitedResponseTail buildTail(UnsolicitedResponseType urt);
+static UnsolicitedResponseTail mergeTails(UnsolicitedResponseTail firstTail,UnsolicitedResponseTail secondTail);
 static BarometerData getBarometerData();
 static MagnetometerData getMagnetometerData();
 static AccelerometerData getAcceleromterData();
@@ -175,13 +176,11 @@ int main(void)
   /* USER CODE BEGIN 3 */
 
 	  if (TRANSMITTING) {
-		  UnsolicitedResponseTail tail = buildTail(FLOOD_FRAME);
-		  unsolicitedResponseTX(tail.data,tail.dataLength);
-		  tail = buildTail(BAROMETER_FRAME);
-		  unsolicitedResponseTX(tail.data,tail.dataLength);
-		  tail = buildTail(MAGNETOMETER_FRAME);
-		  unsolicitedResponseTX(tail.data,tail.dataLength);
-		  tail = buildTail(ACCELEROMETER_FRAME);
+		  UnsolicitedResponseTail firstTail = buildTail(FLOOD_FRAME);
+		  UnsolicitedResponseTail secondTail = buildTail(BAROMETER_FRAME);
+		  UnsolicitedResponseTail thirdTail = buildTail(MAGNETOMETER_FRAME);
+		  UnsolicitedResponseTail fourthTail = buildTail(ACCELEROMETER_FRAME);
+		  UnsolicitedResponseTail tail = mergeTails(mergeTails(firstTail,secondTail),mergeTails(thirdTail,fourthTail));
 		  unsolicitedResponseTX(tail.data,tail.dataLength);
 		  TRANSMITTING = 0;
 	  }
@@ -545,6 +544,19 @@ static UnsolicitedResponseTail buildTail(UnsolicitedResponseType urt) {
 	return tail;
 }
 
+static UnsolicitedResponseTail mergeTails(UnsolicitedResponseTail firstTail,UnsolicitedResponseTail secondTail) {
+	UnsolicitedResponseTail tempTail;
+	uint8_t* tempData = malloc((firstTail.dataLength+1+secondTail.dataLength));
+	memcpy(tempData,firstTail.data,firstTail.dataLength);
+	memcpy(tempData+firstTail.dataLength,&TAIL_SEPARATOR,1);
+	memcpy(tempData+firstTail.dataLength+1,secondTail.data,secondTail.dataLength);
+	free(firstTail.data);
+	free(secondTail.data);
+	tempTail.data = tempData;
+	tempTail.dataLength = firstTail.dataLength+1+secondTail.dataLength;
+	return tempTail;
+}
+
 int64_t twosComplementToSignedInteger(uint32_t rawValue,SignBitIndex sbi) {
 	switch (sbi) {
 		case TWOS_COMPLEMENT_24_BIT:
@@ -648,7 +660,6 @@ static void get_a_axes(int32_t *pData) {
 	pData[0] = (int32_t) (((pDataRaw[0] >> 6) * LSM303_ACC_Sensitivity_List[1][0] + 500) / 1000);
 	pData[1] = (int32_t) (((pDataRaw[1] >> 6) * LSM303_ACC_Sensitivity_List[1][0] + 500) / 1000);
 	pData[2] = (int32_t) (((pDataRaw[2] >> 6) * LSM303_ACC_Sensitivity_List[1][0] + 500) / 1000);
-
 }
 
 static void get_a_axes_raw(int16_t *pData) {
