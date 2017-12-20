@@ -27,4 +27,10 @@ typedef struct {
 	int32_t zValue;
 } MagnetometerData;
 
+typedef struct {
+	int32_t xValue;
+	int32_t yValue;
+	int32_t zValue;
+} AccelerometerData;
+
 #endif /* STRUCTURES_H_ */

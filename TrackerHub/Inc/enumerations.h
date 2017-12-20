@@ -18,6 +18,7 @@ typedef enum {
 	COMPASS_FRAME,
 	BAROMETER_FRAME,
 	MAGNETOMETER_FRAME,
+	ACCELEROMETER_FRAME,
 } UnsolicitedResponseType;
 
 #endif /* ENUMERATIONS_H_ */
