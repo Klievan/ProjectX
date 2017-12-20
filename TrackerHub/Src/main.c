@@ -43,8 +43,11 @@
 /* USER CODE BEGIN Includes */
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 #include "enumerations.h"
+#include "constants.h"
+#include "structures.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -54,18 +57,11 @@ I2C_HandleTypeDef hi2c1;
 
 UART_HandleTypeDef huart4;
 UART_HandleTypeDef huart5;
-UART_HandleTypeDef huart2;
+UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-static uint8_t ender[] = {0x0D,0x0A};
-static uint8_t rawSensorData[5];
-static int64_t pressureRaw = 0;
-static int16_t pressure = 0;
-static int64_t temperatureRaw = 0;
-static int16_t temperature = 0;
-static uint8_t controlRegisterSetting[] = {0x10};
-static char msg[128] = {[0 ... 127] = '\0'};
+static volatile uint8_t TRANSMITTING = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -74,14 +70,22 @@ static void MX_GPIO_Init(void);
 static void MX_UART4_Init(void);
 static void MX_UART5_Init(void);
 static void MX_I2C1_Init(void);
-static void MX_USART2_UART_Init(void);
 static void MX_RTC_Init(void);
+static void MX_USART1_UART_Init(void);
 static uint8_t joinLoRaWANnetwork();//must be called to join LoRaWAN network
 static uint8_t transmitLoRaWANData(uint8_t*);//used to transmit data with AT commands
 static uint8_t verifyLoRaNetworkjoin();
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
-int64_t twosComplementToSignedInteger(uint32_t rawValue,SignBitIndex sbi);
+static int64_t twosComplementToSignedInteger(uint32_t rawValue,SignBitIndex sbi);
+static uint8_t unsolicitedResponseTX(uint8_t* data, uint8_t dataLength);
+static UnsolicitedResponseTail buildTail(UnsolicitedResponseType urt);
+static BarometerData getBarometerData();
+static MagnetometerData getMagnetometerData();
+static void get_m_axes(int32_t *pData);
+static void get_m_axes_raw(int16_t *pData);
+static void get_a_axes(int32_t *pData);
+static void get_a_axes_raw(int16_t *pData);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -116,10 +120,23 @@ int main(void)
   MX_UART4_Init();
   MX_UART5_Init();
   MX_I2C1_Init();
-  MX_USART2_UART_Init();
   MX_RTC_Init();
+  MX_USART1_UART_Init();
 
   /* USER CODE BEGIN 2 */
+  HAL_PWREx_EnableLowPowerRunMode();
+
+  // set barometer ODR to 1Hz
+  HAL_I2C_Mem_Write(&hi2c1,LPS22HB_ADDRESS,LPS22HB_CTRL_REG1,I2C_MEMADD_SIZE_8BIT,0x10,1,HAL_MAX_DELAY);
+  while(HAL_I2C_IsDeviceReady(&hi2c1,LPS22HB_ADDRESS,1,HAL_MAX_DELAY) != HAL_OK);
+
+  HAL_I2C_Mem_Write(&hi2c1,LSM303_MAG_ADDRESS,LSM303_CFG_REG_A_M,I2C_MEMADD_SIZE_8BIT,0x00,1,HAL_MAX_DELAY);
+  while (HAL_I2C_IsDeviceReady(&hi2c1,LSM303_MAG_ADDRESS,1,HAL_MAX_DELAY) != HAL_OK);
+
+  HAL_I2C_Mem_Write(&hi2c1,LSM303_MAG_ADDRESS,LSM303_CFG_REG_C_M,I2C_MEMADD_SIZE_8BIT,0x01,1,HAL_MAX_DELAY);
+  while (HAL_I2C_IsDeviceReady(&hi2c1,LSM303_MAG_ADDRESS,1,HAL_MAX_DELAY) != HAL_OK);
+
+
 
   /* Enable UART2 interrupts */
   HAL_NVIC_SetPriority();
@@ -134,25 +151,16 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-	  HAL_I2C_Mem_Read(&hi2c1,0xBA,0x28,I2C_MEMADD_SIZE_8BIT,rawSensorData,5,HAL_MAX_DELAY);
 
-	  uint32_t pressureTwosComplement = (rawSensorData[2] << 16) | (rawSensorData[1] << 8) | rawSensorData[0];
-	  pressureRaw = twosComplementToSignedInteger(pressureTwosComplement,TWOS_COMPLEMENT_24_BIT);
-	  pressure = (int16_t)(pressureRaw/410);
-	  sprintf(msg,"%d µbar",pressure);
-	  HAL_UART_Transmit(&huart2,(uint8_t *)msg,21,HAL_MAX_DELAY);
-	  HAL_UART_Transmit(&huart2,ender,2,HAL_MAX_DELAY);
-
-	  uint32_t temperatureTwosComplement = (rawSensorData[4] << 8) | rawSensorData[3];
-	  temperatureRaw = twosComplementToSignedInteger(temperatureTwosComplement,TWOS_COMPLEMENT_16_BIT);
-	  temperature = (int16_t)(temperatureRaw/100);
-	  for (uint16_t i = 0; i < (sizeof(msg)/sizeof(msg[0])); ++i)
-		  msg[i] = '\0';
-	  sprintf(msg,"%d °C",temperature);
-	  HAL_UART_Transmit(&huart2,(uint8_t *)msg,21,HAL_MAX_DELAY);
-	  HAL_UART_Transmit(&huart2,ender,2,HAL_MAX_DELAY);
-
-	  HAL_Delay(2000);
+	  if (TRANSMITTING) {
+		  UnsolicitedResponseTail tail = buildTail(FLOOD_FRAME);
+		  unsolicitedResponseTX(tail.data,tail.dataLength);
+		  tail = buildTail(BAROMETER_FRAME);
+		  unsolicitedResponseTX(tail.data,tail.dataLength);
+		  tail = buildTail(MAGNETOMETER_FRAME);
+		  unsolicitedResponseTX(tail.data,tail.dataLength);
+		  TRANSMITTING = 0;
+	  }
   }
   /* USER CODE END 3 */
 
@@ -285,7 +293,7 @@ static void MX_RTC_Init(void)
   }
     /**Enable the WakeUp 
     */
-  if (HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, 23125, RTC_WAKEUPCLOCK_RTCCLK_DIV16) != HAL_OK)
+  if (HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, 4625, RTC_WAKEUPCLOCK_RTCCLK_DIV16) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
@@ -330,19 +338,19 @@ static void MX_UART5_Init(void)
 
 }
 
-/* USART2 init function */
-static void MX_USART2_UART_Init(void)
+/* USART1 init function */
+static void MX_USART1_UART_Init(void)
 {
 
-  huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
-  huart2.Init.WordLength = UART_WORDLENGTH_8B;
-  huart2.Init.StopBits = UART_STOPBITS_1;
-  huart2.Init.Parity = UART_PARITY_NONE;
-  huart2.Init.Mode = UART_MODE_TX_RX;
-  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_HalfDuplex_Init(&huart2) != HAL_OK)
+  huart1.Instance = USART1;
+  huart1.Init.BaudRate = 115200;
+  huart1.Init.WordLength = UART_WORDLENGTH_8B;
+  huart1.Init.StopBits = UART_STOPBITS_1;
+  huart1.Init.Parity = UART_PARITY_NONE;
+  huart1.Init.Mode = UART_MODE_TX_RX;
+  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart1) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
@@ -355,6 +363,10 @@ static void MX_USART2_UART_Init(void)
         * Output
         * EVENT_OUT
         * EXTI
+        * Free pins are configured automatically as Analog (this feature is enabled through 
+        * the Code Generation settings)
+     PA2   ------> USART2_TX
+     PA3   ------> USART2_RX
 */
 static void MX_GPIO_Init(void)
 {
@@ -366,12 +378,57 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
+
+  /*Configure GPIO pins : PC13 PC0 PC1 PC2 
+                           PC3 PC4 PC5 PC6 
+                           PC7 PC8 PC9 */
+  GPIO_InitStruct.Pin = GPIO_PIN_13|GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2 
+                          |GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6 
+                          |GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9;
+  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PA0 PA1 */
   GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : USART_TX_Pin USART_RX_Pin */
+  GPIO_InitStruct.Pin = USART_TX_Pin|USART_RX_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF7_USART2;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PA4 PA5 PA6 PA7 
+                           PA8 PA11 PA12 PA15 */
+  GPIO_InitStruct.Pin = GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7 
+                          |GPIO_PIN_8|GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_15;
+  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PB0 PB1 PB2 PB10 
+                           PB11 PB12 PB13 PB14 
+                           PB15 PB4 PB5 PB6 
+                           PB7 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_10 
+                          |GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14 
+                          |GPIO_PIN_15|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6 
+                          |GPIO_PIN_7;
+  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PD2 */
+  GPIO_InitStruct.Pin = GPIO_PIN_2;
+  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
@@ -383,6 +440,76 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+static uint8_t unsolicitedResponseTX(uint8_t* data, uint8_t dataLength) {
+	if ((dataLength + 1 + sizeof(UNSOLICITED_RESPONSE_BASE)) > MESSAGE_MAX_LEN)
+		return 0;
+	else {
+		/*
+		 * Memory allocated with malloc never loses scope until it is forcefully freed using
+		 * the free function or the program terminates.
+		 */
+		uint8_t* unsollicitedResponse = (uint8_t*) malloc((dataLength + 1 + sizeof(UNSOLICITED_RESPONSE_BASE)) * sizeof(uint8_t));
+
+		for (uint8_t i = 0; i < sizeof(UNSOLICITED_RESPONSE_BASE); ++i)
+			unsollicitedResponse[i] = UNSOLICITED_RESPONSE_BASE[i];
+
+		unsollicitedResponse[sizeof(UNSOLICITED_RESPONSE_BASE)] = dataLength;
+
+		for (uint8_t i = 0; i < dataLength; ++i)
+			unsollicitedResponse[sizeof(UNSOLICITED_RESPONSE_BASE) + 1 + i] = data[i];
+		free(data);
+
+		HAL_UART_Transmit(&huart4, unsollicitedResponse, dataLength + 1 + sizeof(UNSOLICITED_RESPONSE_BASE),HAL_MAX_DELAY);
+		free(unsollicitedResponse);
+	}
+	return 1;
+}
+
+static UnsolicitedResponseTail buildTail(UnsolicitedResponseType urt) {
+	/*
+	 * Memory allocated with malloc never loses scope until it is forcefully freed using
+	 * the free function or the program terminates. Therefore a pointer to this memory
+	 * location is passed as a return value so it can be freed later (after use).
+	 */
+	uint8_t* data = (uint8_t*) malloc((MESSAGE_MAX_LEN - sizeof(UNSOLICITED_RESPONSE_BASE)) * sizeof(uint8_t));
+	uint8_t dataLength = 0;
+	UnsolicitedResponseTail tail = {data,dataLength};
+	int32_t magData[3];
+	BarometerData barometerData;
+	MagnetometerData magnetometerData;
+
+	switch (urt) {
+		case FLOOD_FRAME:
+			dataLength = sizeof(FLOOD_TAIL);
+			realloc(data,dataLength);
+			memcpy(data,FLOOD_TAIL,dataLength);
+			break;
+		case COMPASS_FRAME:
+			// do something
+			break;
+		case BAROMETER_FRAME:
+			barometerData = getBarometerData();
+			dataLength = sizeof(barometerData.pressure);
+			realloc(data,dataLength);
+			memcpy(data,&barometerData.pressure,dataLength);
+			break;
+		case MAGNETOMETER_FRAME:
+			magnetometerData = getMagnetometerData();
+			magData[0] = magnetometerData.xValue;
+			magData[1] = magnetometerData.yValue;
+			magData[2] = magnetometerData.zValue;
+			dataLength = sizeof(magData)/sizeof(magData[0]);
+			realloc(data,dataLength);
+			memcpy(data,magData,dataLength);
+			break;
+		default:
+			break;
+	}
+	tail.data = data;
+	tail.dataLength = dataLength;
+	return tail;
+}
+
 int64_t twosComplementToSignedInteger(uint32_t rawValue,SignBitIndex sbi) {
 	switch (sbi) {
 		case TWOS_COMPLEMENT_24_BIT:
@@ -402,8 +529,20 @@ int64_t twosComplementToSignedInteger(uint32_t rawValue,SignBitIndex sbi) {
 	}
 }
 
-void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc) {
+static BarometerData getBarometerData() {
+	uint8_t rawSensorData[5];
+	BarometerData barometerData;
+	HAL_I2C_Mem_Read(&hi2c1,0xBA,0x28,I2C_MEMADD_SIZE_8BIT,rawSensorData,5,HAL_MAX_DELAY);
 
+	uint32_t pressureTwosComplement = (rawSensorData[2] << 16) | (rawSensorData[1] << 8) | rawSensorData[0];
+	int64_t pressureRaw = twosComplementToSignedInteger(pressureTwosComplement,TWOS_COMPLEMENT_24_BIT);
+	barometerData.pressure = (int32_t)(pressureRaw/4096);
+
+	uint32_t temperatureTwosComplement = (rawSensorData[4] << 8) | rawSensorData[3];
+	int64_t temperatureRaw = twosComplementToSignedInteger(temperatureTwosComplement,TWOS_COMPLEMENT_16_BIT);
+	barometerData.temperature = (int32_t)(temperatureRaw/100);
+
+	return barometerData;
 }
 
 uint8_t joinLoRaWANnetwork(){
@@ -449,6 +588,83 @@ uint8_t transmitLoRaWANData(uint8_t* data){
 		}
 		else return 1;
 	//used to transmit data with AT commands
+}
+
+static MagnetometerData getMagnetometerData() {
+	int32_t axes_m[3];
+	get_m_axes(axes_m);
+	MagnetometerData magnetoMeterData;
+	magnetoMeterData.xValue = axes_m[0];
+	magnetoMeterData.yValue = axes_m[1];
+	magnetoMeterData.zValue = axes_m[2];
+	return magnetoMeterData;
+}
+
+/**
+ * @brief  Read raw data from LSM303AGR Magnetometer
+ * @param  pData the pointer where the magnetomer raw data are stored
+ */
+static void get_m_axes(int32_t *pData) {
+	int16_t pDataRaw[3];
+	float sensitivity = 1.5;
+
+	/* Read raw data from LSM303AGR output register. */
+	get_m_axes_raw(pDataRaw);
+
+	/* Calculate the data. */
+	pData[0] = (int32_t) (pDataRaw[0] * sensitivity);
+	pData[1] = (int32_t) (pDataRaw[1] * sensitivity);
+	pData[2] = (int32_t) (pDataRaw[2] * sensitivity);
+}
+
+/**
+ * @brief  Read raw data from LSM303AGR Magnetometer
+ * @param  pData the pointer where the magnetomer raw data are stored
+ */
+void get_m_axes_raw(int16_t *pData) {
+	uint8_t regValue[6] = {[0 ... 5] = 0};
+	int16_t *regValueInt16;
+
+	/* Read output registers from LSM303AGR_MAG_OUTX_L to LSM303AGR_MAG_OUTZ_H. */
+	HAL_I2C_Mem_Read(&hi2c1,LSM303_MAG_ADDRESS,OUTX_L_REG_M,I2C_MEMADD_SIZE_8BIT,&regValue[0],1,100);
+	HAL_I2C_Mem_Read(&hi2c1,LSM303_MAG_ADDRESS,OUTX_H_REG_M,I2C_MEMADD_SIZE_8BIT,&regValue[1],1,100);
+	HAL_I2C_Mem_Read(&hi2c1,LSM303_MAG_ADDRESS,OUTY_L_REG_M,I2C_MEMADD_SIZE_8BIT,&regValue[2],1,100);
+	HAL_I2C_Mem_Read(&hi2c1,LSM303_MAG_ADDRESS,OUTY_H_REG_M,I2C_MEMADD_SIZE_8BIT,&regValue[3],1,100);
+	HAL_I2C_Mem_Read(&hi2c1,LSM303_MAG_ADDRESS,OUTZ_L_REG_M,I2C_MEMADD_SIZE_8BIT,&regValue[4],1,100);
+	HAL_I2C_Mem_Read(&hi2c1,LSM303_MAG_ADDRESS,OUTZ_H_REG_M,I2C_MEMADD_SIZE_8BIT,&regValue[5],1,100);
+
+	regValueInt16 = (int16_t *)regValue;
+
+	/* Format the data. */
+	pData[0] = regValueInt16[0];
+	pData[1] = regValueInt16[1];
+	pData[2] = regValueInt16[2];
+}
+
+void get_a_axes(int32_t *pData) {
+	int16_t pDataRaw[3];
+
+	LSM303AGR_ACC_Get_Raw_Acceleration(pDataRaw);
+
+	pData[0] = ((pDataRaw[0] >> 6) * 3900 + 500) / 1000;
+	pData[1] = ((pDataRaw[1] >> 6) * 3900 + 500) / 1000;
+	pData[2] = ((pDataRaw[2] >> 6) * 3900 + 500) / 1000;
+}
+
+void get_a_axes_raw(int16_t *pData) {
+	uint8_t regValue[6] = { 0, 0, 0, 0, 0, 0 };
+	int16_t *regValueInt16;
+
+	/*HAL_I2C_Mem_Read(&hi2c1,LSM303_ACC_ADDRESS,LSM303_ACC_X_L_A_MULTI_READ,1,Data,6,100);
+	HAL_UART_Transmit(&huart2,Data,6,HAL_MAX_DELAY);
+
+	Xaxis = ((Data[1] << 8) | Data[0]);
+	Yaxis = ((Data[3] << 8) | Data[2]);
+	Zaxis = ((Data[5] << 8) | Data[4]);*/
+}
+
+void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc) {
+	if(!TRANSMITTING) TRANSMITTING = 1;
 }
 /* USER CODE END 4 */
 
