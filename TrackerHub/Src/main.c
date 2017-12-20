@@ -648,6 +648,7 @@ static void get_a_axes(int32_t *pData) {
 	pData[0] = (int32_t) (((pDataRaw[0] >> 6) * LSM303_ACC_Sensitivity_List[1][0] + 500) / 1000);
 	pData[1] = (int32_t) (((pDataRaw[1] >> 6) * LSM303_ACC_Sensitivity_List[1][0] + 500) / 1000);
 	pData[2] = (int32_t) (((pDataRaw[2] >> 6) * LSM303_ACC_Sensitivity_List[1][0] + 500) / 1000);
+
 }
 
 static void get_a_axes_raw(int16_t *pData) {
