@@ -3,6 +3,7 @@
 from __future__ import print_function
 import argparse
 import pprint
+import time
 
 import jsonpickle
 
@@ -56,8 +57,16 @@ class GatewayCommandExample:
                                     async=False)
 
   def run(self):
-    cmd = Command.create_with_return_file_data_action(0x40,[0x40],InterfaceType.D7ASP, D7Config(addressee=Addressee(access_class=0x11, id_type=IdType.UID, id=0x43373134003e0041)))
-    self.execute_rpc_command("c2c4ebd0-b95a-11e7-bebc-85e6dd10a2e8", cmd)
+    cmd = Command.create_with_return_file_data_action(0x0A,[0x30,0x31, 0X0D],InterfaceType.D7ASP, D7Config(addressee=Addressee(access_class=0x11, id_type=IdType.NOID)))
+    while 1:
+        try:
+            self.execute_rpc_command("c2c4ebd0-b95a-11e7-bebc-85e6dd10a2e8", cmd)
+            print("Online");
+        except:
+            print("Offline");
+
+        time.sleep(1);
+
 
 
 if __name__ == "__main__":
