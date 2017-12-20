@@ -17,6 +17,7 @@ typedef enum {
 	FLOOD_FRAME,
 	COMPASS_FRAME,
 	BAROMETER_FRAME,
+	MAGNETOMETER_FRAME,
 } UnsolicitedResponseType;
 
 #endif /* ENUMERATIONS_H_ */
