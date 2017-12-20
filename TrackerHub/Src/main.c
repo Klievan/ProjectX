@@ -53,7 +53,7 @@
 /* Private variables ---------------------------------------------------------*/
 I2C_HandleTypeDef hi2c1;
 
-RTC_HandleTypeDef hrtc;
+//RTC_HandleTypeDef hrtc;
 
 UART_HandleTypeDef huart4;
 UART_HandleTypeDef huart5;
@@ -72,7 +72,9 @@ static void MX_UART5_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_RTC_Init(void);
 static void MX_USART1_UART_Init(void);
-
+static uint8_t joinLoRaWANnetwork();//must be called to join LoRaWAN network
+static uint8_t transmitLoRaWANData(uint8_t*);//used to transmit data with AT commands
+static uint8_t verifyLoRaNetworkjoin();
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
 static int64_t twosComplementToSignedInteger(uint32_t rawValue,SignBitIndex sbi);
@@ -164,6 +166,11 @@ int main(void)
   while (HAL_I2C_IsDeviceReady(&hi2c1,LSM303_ACC_ADDRESS,1,HAL_MAX_DELAY) != HAL_OK);
 
 
+
+  /* Enable UART2 interrupts */
+  HAL_NVIC_SetPriority();
+  HAL_I2C_Mem_Write(&hi2c1,0xBA,0x10,I2C_MEMADD_SIZE_8BIT,controlRegisterSetting,1,HAL_MAX_DELAY);
+  while(HAL_I2C_IsDeviceReady(&hi2c1,0xBA,1,HAL_MAX_DELAY) != HAL_OK);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -348,14 +355,14 @@ static void MX_UART5_Init(void)
 {
 
   huart5.Instance = UART5;
-  huart5.Init.BaudRate = 115200;
+  huart5.Init.BaudRate = 9600;
   huart5.Init.WordLength = UART_WORDLENGTH_8B;
   huart5.Init.StopBits = UART_STOPBITS_1;
   huart5.Init.Parity = UART_PARITY_NONE;
   huart5.Init.Mode = UART_MODE_TX_RX;
   huart5.Init.HwFlowCtl = UART_HWCONTROL_NONE;
   huart5.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_HalfDuplex_Init(&huart5) != HAL_OK)
+  if (HAL_UART_Init(&huart5) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
@@ -578,6 +585,51 @@ static BarometerData getBarometerData() {
 	barometerData.temperature = (int32_t)(temperatureRaw/100);
 
 	return barometerData;
+}
+
+uint8_t joinLoRaWANnetwork(){
+	char AT_return_code[7] = "";
+	char AT_join_cmd[] = "AT+JOIN\r\n";
+	HAL_UART_Transmit_IT(&huart4, (uint8_t*)AT_join_cmd, strlen(AT_join_cmd));//strlen excludes \0 so it's ok
+	HAL_UART_Receive(&huart4, (uint8_t*)AT_return_code,6,HAL_MAX_DELAY);//receiving with interrupts just doesn't make sense here
+	// wait for max delay. Unfortunate but I wouldn't know how to fix through interrupts
+	if (strcmp(AT_return_code,"\r\nOK\r\n")==0){
+		//if these are equal the network was joined succesfully
+		return 0;
+	}
+	else return 1;
+	// else the LoRaWAN modem returned \r\nAT_BUSY_ERROR\r\n thus return 1 as error
+}
+
+uint8_t verifyLoRaNetworkjoin(){
+	char AT_return_code[7] = "";
+	char AT_NJS_cmd[] = "AT+NJS=?\r\n";
+	HAL_UART_TransmitIT(&huart4, (uint8_t*)AT_NJS_cmd, strlen(AT_NJS_cmd));//strlen excludes \0 so it's ok
+	HAL_UART_Receive(&huart4, (uint8_t*)AT_return_code, 6, HAL_MAX_DELAY);
+	// wait for max delay. Unfortunate but I wouldn't know how to fix through interrupts
+	if (strcmp(AT_return_code,"\r\n1\r\n")==0){
+			//if these are equal, the network was joined successfully
+			return 0;
+		}
+		else return 1;
+		// else the LoRaWAN modem returned \r\nAT_BUSY_ERROR\r\n thus return 1 as error
+}
+
+uint8_t transmitLoRaWANData(uint8_t* data){
+	char AT_SEND_cmd[11] = "AT+SEND=2:";
+	char AT_return_code[7] = "";
+	char* datastring = (char*)malloc((strlen(data)+strlen(AT_SEND_cmd)+2)*sizeof(char));
+	strncpy(datastring, AT_SEND_cmd, 10);
+	strncpy(&datastring[10], data, strlen(data));
+	strncpy(&datastring[strlen(data)+strlen(AT_SEND_cmd)], "\r\n", 2);
+	HAL_UART_Transmit_IT(&huart4, data, strlen(data)+strlen(AT_SEND_cmd)+2);
+	HAL_UART_Receive(&huart4, (uint8_t*)AT_return_code,6,HAL_MAX_DELAY);
+	if (strcmp(AT_return_code,"\r\nOK\r\n")==0){
+			//if these are equal the network was joined succesfully
+			return 0;
+		}
+		else return 1;
+	//used to transmit data with AT commands
 }
 
 static MagnetometerData getMagnetometerData() {
