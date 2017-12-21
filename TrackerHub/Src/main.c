@@ -48,6 +48,7 @@
 #include "enumerations.h"
 #include "constants.h"
 #include "structures.h"
+#include "macros.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -81,11 +82,12 @@ static UnsolicitedResponseTail buildTail(UnsolicitedResponseType urt);
 static UnsolicitedResponseTail mergeTails(UnsolicitedResponseTail firstTail,UnsolicitedResponseTail secondTail);
 static BarometerData getBarometerData();
 static MagnetometerData getMagnetometerData();
-static AccelerometerData getAcceleromterData();
+static AccelerometerData getAccelerometerData();
 static void get_m_axes(int32_t *pData);
 static void get_m_axes_raw(int16_t *pData);
 static void get_a_axes(int32_t *pData);
 static void get_a_axes_raw(int16_t *pData);
+static void enterStopMode(uint32_t regulator);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -124,46 +126,40 @@ int main(void)
   MX_USART1_UART_Init();
 
   /* USER CODE BEGIN 2 */
+  //enterStopMode(PWR_LOWPOWERREGULATOR_ON);
   HAL_PWREx_EnableLowPowerRunMode();
 
-  uint8_t settings = 0x10;
-  HAL_I2C_Mem_Write(&hi2c1,LPS22HB_ADDRESS,LPS22HB_CTRL_REG1,I2C_MEMADD_SIZE_8BIT,&settings,1,HAL_MAX_DELAY);
-  while(HAL_I2C_IsDeviceReady(&hi2c1,LPS22HB_ADDRESS,1,HAL_MAX_DELAY) != HAL_OK);
+  uint8_t REG_VALUE = LPS22HB_ODR_1HZ;
+  HAL_I2C_Mem_Write(&hi2c1,LPS22HB_ADDR,LPS22HB_CTRL_REG1,I2C_MEMADD_SIZE_8BIT,&REG_VALUE,1,HAL_MAX_DELAY);
+  while(HAL_I2C_IsDeviceReady(&hi2c1,LPS22HB_ADDR,1,HAL_MAX_DELAY) != HAL_OK);
 
-  settings = 0x00;
-  HAL_I2C_Mem_Write(&hi2c1,LSM303_MAG_ADDRESS,LSM303_CFG_REG_A_M,I2C_MEMADD_SIZE_8BIT,&settings,1,HAL_MAX_DELAY);
-  while (HAL_I2C_IsDeviceReady(&hi2c1,LSM303_MAG_ADDRESS,1,HAL_MAX_DELAY) != HAL_OK);
+  REG_VALUE = LSM303_MAG_SOFT_RST | LSM303_MAG_LPEN | LSM303_MAG_ODR_10HZ | LSM303_MAG_MD_CON;
+  HAL_I2C_Mem_Write(&hi2c1,LSM303_MAG_ADDR,LSM303_MAG_CFG_REGA,I2C_MEMADD_SIZE_8BIT,&REG_VALUE,1,HAL_MAX_DELAY);
+  while (HAL_I2C_IsDeviceReady(&hi2c1,LSM303_MAG_ADDR,1,HAL_MAX_DELAY) != HAL_OK);
 
-  settings = 0x01;
-  HAL_I2C_Mem_Write(&hi2c1,LSM303_MAG_ADDRESS,LSM303_CFG_REG_C_M,I2C_MEMADD_SIZE_8BIT,&settings,1,HAL_MAX_DELAY);
-  while (HAL_I2C_IsDeviceReady(&hi2c1,LSM303_MAG_ADDRESS,1,HAL_MAX_DELAY) != HAL_OK);
+  REG_VALUE = LSM303_MAG_BDU | LSM303_MAG_INT;
+  HAL_I2C_Mem_Write(&hi2c1,LSM303_MAG_ADDR,LSM303_MAG_CFG_REGC,I2C_MEMADD_SIZE_8BIT,&REG_VALUE,1,HAL_MAX_DELAY);
+  while (HAL_I2C_IsDeviceReady(&hi2c1,LSM303_MAG_ADDR,1,HAL_MAX_DELAY) != HAL_OK);
 
-  HAL_Delay(10);
+  HAL_Delay(10); // ACC startup time < 5ms
 
-  settings = 0x57;
-  HAL_I2C_Mem_Write(&hi2c1,LSM303_ACC_ADDRESS,LSM303_ACC_CTRL_REG1_A,I2C_MEMADD_SIZE_8BIT,&settings,1,HAL_MAX_DELAY);
-  while (HAL_I2C_IsDeviceReady(&hi2c1,LSM303_ACC_ADDRESS,1,HAL_MAX_DELAY) != HAL_OK);
+  REG_VALUE = LSM303_ACC_ODR_10HZ | LSM303_ACC_XYZEN | LSM303_ACC_LPEN;
+  HAL_I2C_Mem_Write(&hi2c1,LSM303_ACC_ADDR,LSM303_ACC_CTRL_REG1,I2C_MEMADD_SIZE_8BIT,&REG_VALUE,1,HAL_MAX_DELAY);
+  while (HAL_I2C_IsDeviceReady(&hi2c1,LSM303_ACC_ADDR,1,HAL_MAX_DELAY) != HAL_OK);
 
-  settings = 0x00;
-  HAL_I2C_Mem_Write(&hi2c1,LSM303_ACC_ADDRESS,LSM303_ACC_CTRL_REG2_A,I2C_MEMADD_SIZE_8BIT,&settings,1,HAL_MAX_DELAY);
-  while (HAL_I2C_IsDeviceReady(&hi2c1,LSM303_ACC_ADDRESS,1,HAL_MAX_DELAY) != HAL_OK);
+  REG_VALUE = LSM303_ACC_I1_DRDY2;
+  HAL_I2C_Mem_Write(&hi2c1,LSM303_ACC_ADDR,LSM303_ACC_CTRL_REG3,I2C_MEMADD_SIZE_8BIT,&REG_VALUE,1,HAL_MAX_DELAY);
+  while (HAL_I2C_IsDeviceReady(&hi2c1,LSM303_ACC_ADDR,1,HAL_MAX_DELAY) != HAL_OK);
 
-  settings = 0x08;
-  HAL_I2C_Mem_Write(&hi2c1,LSM303_ACC_ADDRESS,LSM303_ACC_CTRL_REG3_A,I2C_MEMADD_SIZE_8BIT,&settings,1,HAL_MAX_DELAY);
-  while (HAL_I2C_IsDeviceReady(&hi2c1,LSM303_ACC_ADDRESS,1,HAL_MAX_DELAY) != HAL_OK);
+  REG_VALUE = LSM303_ACC_BDU | LSM303_ACC_FS_2G;
+  HAL_I2C_Mem_Write(&hi2c1,LSM303_ACC_ADDR,LSM303_ACC_CTRL_REG4,I2C_MEMADD_SIZE_8BIT,&REG_VALUE,1,HAL_MAX_DELAY);
+  while (HAL_I2C_IsDeviceReady(&hi2c1,LSM303_ACC_ADDR,1,HAL_MAX_DELAY) != HAL_OK);
 
-  settings = 0x80;
-  HAL_I2C_Mem_Write(&hi2c1,LSM303_ACC_ADDRESS,LSM303_ACC_CTRL_REG4_A,I2C_MEMADD_SIZE_8BIT,&settings,1,HAL_MAX_DELAY);
-  while (HAL_I2C_IsDeviceReady(&hi2c1,LSM303_ACC_ADDRESS,1,HAL_MAX_DELAY) != HAL_OK);
+  REG_VALUE = LSM303_ACC_BOOT;
+  HAL_I2C_Mem_Write(&hi2c1,LSM303_ACC_ADDR,LSM303_ACC_CTRL_REG5,I2C_MEMADD_SIZE_8BIT,&REG_VALUE,1,HAL_MAX_DELAY);
+  while (HAL_I2C_IsDeviceReady(&hi2c1,LSM303_ACC_ADDR,1,HAL_MAX_DELAY) != HAL_OK);
 
-  settings = 0x80;
-  HAL_I2C_Mem_Write(&hi2c1,LSM303_ACC_ADDRESS,LSM303_ACC_CTRL_REG5_A,I2C_MEMADD_SIZE_8BIT,&settings,1,HAL_MAX_DELAY);
-  while (HAL_I2C_IsDeviceReady(&hi2c1,LSM303_ACC_ADDRESS,1,HAL_MAX_DELAY) != HAL_OK);
-
-  settings = 0x00;
-  HAL_I2C_Mem_Write(&hi2c1,LSM303_ACC_ADDRESS,LSM303_ACC_CTRL_REG6_A,I2C_MEMADD_SIZE_8BIT,&settings,1,HAL_MAX_DELAY);
-  while (HAL_I2C_IsDeviceReady(&hi2c1,LSM303_ACC_ADDRESS,1,HAL_MAX_DELAY) != HAL_OK);
-
+  HAL_Delay(10); // wait for changes to take effect
 
   /* USER CODE END 2 */
 
@@ -175,12 +171,14 @@ int main(void)
 
   /* USER CODE BEGIN 3 */
 
+	  /*enterStopMode(PWR_LOWPOWERREGULATOR_ON);
+	  HAL_PWREx_EnableLowPowerRunMode();*/
+
 	  if (TRANSMITTING) {
-		  UnsolicitedResponseTail firstTail = buildTail(FLOOD_FRAME);
-		  UnsolicitedResponseTail secondTail = buildTail(BAROMETER_FRAME);
-		  UnsolicitedResponseTail thirdTail = buildTail(MAGNETOMETER_FRAME);
-		  UnsolicitedResponseTail fourthTail = buildTail(ACCELEROMETER_FRAME);
-		  UnsolicitedResponseTail tail = mergeTails(mergeTails(firstTail,secondTail),mergeTails(thirdTail,fourthTail));
+		  UnsolicitedResponseTail firstTail = buildTail(BAROMETER_FRAME);
+		  UnsolicitedResponseTail secondTail = buildTail(MAGNETOMETER_FRAME);
+		  UnsolicitedResponseTail thirdTail = buildTail(ACCELEROMETER_FRAME);
+		  UnsolicitedResponseTail tail = mergeTails(firstTail,mergeTails(secondTail,thirdTail));
 		  unsolicitedResponseTX(tail.data,tail.dataLength);
 		  TRANSMITTING = 0;
 	  }
@@ -316,7 +314,7 @@ static void MX_RTC_Init(void)
   }
     /**Enable the WakeUp 
     */
-  if (HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, 4625, RTC_WAKEUPCLOCK_RTCCLK_DIV16) != HAL_OK)
+  if (HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, 9250, RTC_WAKEUPCLOCK_RTCCLK_DIV16) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
@@ -491,7 +489,7 @@ static uint8_t unsolicitedResponseTX(uint8_t* data, uint8_t dataLength) {
 static UnsolicitedResponseTail buildTail(UnsolicitedResponseType urt) {
 	/*
 	 * Memory allocated with malloc never loses scope until it is forcefully freed using
-	 * the free function or the program terminates. Therefore a pointer to this memory
+	 * the free function or when the program terminates. Therefore a pointer to this memory
 	 * location is passed as a return value so it can be freed later (after use).
 	 */
 	uint8_t* data = (uint8_t*) malloc((MESSAGE_MAX_LEN - sizeof(UNSOLICITED_RESPONSE_BASE)) * sizeof(uint8_t));
@@ -528,7 +526,7 @@ static UnsolicitedResponseTail buildTail(UnsolicitedResponseType urt) {
 			memcpy(data,magData,dataLength);
 			break;
 		case ACCELEROMETER_FRAME:
-			accelerometerData = getAcceleromterData();
+			accelerometerData = getAccelerometerData();
 			accData[0] = accelerometerData.xValue;
 			accData[1] = accelerometerData.yValue;
 			accData[2] = accelerometerData.zValue;
@@ -546,6 +544,7 @@ static UnsolicitedResponseTail buildTail(UnsolicitedResponseType urt) {
 
 static UnsolicitedResponseTail mergeTails(UnsolicitedResponseTail firstTail,UnsolicitedResponseTail secondTail) {
 	UnsolicitedResponseTail tempTail;
+	// memory allocated with malloc never loses scope until it is forcefully freed
 	uint8_t* tempData = malloc((firstTail.dataLength+1+secondTail.dataLength));
 	memcpy(tempData,firstTail.data,firstTail.dataLength);
 	memcpy(tempData+firstTail.dataLength,&TAIL_SEPARATOR,1);
@@ -602,7 +601,7 @@ static MagnetometerData getMagnetometerData() {
 	return magnetometerData;
 }
 
-static AccelerometerData getAcceleromterData() {
+static AccelerometerData getAccelerometerData() {
 	int32_t axes_a[3];
 	get_a_axes(axes_a);
 	AccelerometerData accelerometerData;
@@ -612,38 +611,31 @@ static AccelerometerData getAcceleromterData() {
 	return accelerometerData;
 }
 
-/**
- * @brief  Read raw data from LSM303AGR Magnetometer
- * @param  pData the pointer where the magnetomer raw data are stored
- */
 static void get_m_axes(int32_t *pData) {
 	int16_t pDataRaw[3];
-	float sensitivity = 1.5;
 
-	/* Read raw data from LSM303AGR output register. */
 	get_m_axes_raw(pDataRaw);
 
-	/* Calculate the data. */
-	pData[0] = (int32_t) (pDataRaw[0] * sensitivity);
-	pData[1] = (int32_t) (pDataRaw[1] * sensitivity);
-	pData[2] = (int32_t) (pDataRaw[2] * sensitivity);
+	pData[0] = (int32_t) (pDataRaw[0] + (pDataRaw[0] >> 1));
+	pData[1] = (int32_t) (pDataRaw[1] + (pDataRaw[1] >> 1));
+	pData[2] = (int32_t) (pDataRaw[2] + (pDataRaw[2] >> 1));
 }
 
-/**
- * @brief  Read raw data from LSM303AGR Magnetometer
- * @param  pData the pointer where the magnetomer raw data are stored
- */
 static void get_m_axes_raw(int16_t *pData) {
+	uint8_t status[1];
 	uint8_t regValue[6] = {[0 ... 5] = 0};
 	int16_t *regValueInt16;
 
-	/* Read output registers from LSM303AGR_MAG_OUTX_L to LSM303AGR_MAG_OUTZ_H. */
-	HAL_I2C_Mem_Read(&hi2c1,LSM303_MAG_ADDRESS,OUTX_L_REG_M,I2C_MEMADD_SIZE_8BIT,&regValue[0],1,100);
-	HAL_I2C_Mem_Read(&hi2c1,LSM303_MAG_ADDRESS,OUTX_H_REG_M,I2C_MEMADD_SIZE_8BIT,&regValue[1],1,100);
-	HAL_I2C_Mem_Read(&hi2c1,LSM303_MAG_ADDRESS,OUTY_L_REG_M,I2C_MEMADD_SIZE_8BIT,&regValue[2],1,100);
-	HAL_I2C_Mem_Read(&hi2c1,LSM303_MAG_ADDRESS,OUTY_H_REG_M,I2C_MEMADD_SIZE_8BIT,&regValue[3],1,100);
-	HAL_I2C_Mem_Read(&hi2c1,LSM303_MAG_ADDRESS,OUTZ_L_REG_M,I2C_MEMADD_SIZE_8BIT,&regValue[4],1,100);
-	HAL_I2C_Mem_Read(&hi2c1,LSM303_MAG_ADDRESS,OUTZ_H_REG_M,I2C_MEMADD_SIZE_8BIT,&regValue[5],1,100);
+	do
+		HAL_I2C_Mem_Read(&hi2c1,LSM303_MAG_ADDR,LSM303_MAG_SREG,I2C_MEMADD_SIZE_8BIT,status,1,100);
+	while(!CHECK_BIT(*status,LSM303_MAG_XYZDA));
+
+	HAL_I2C_Mem_Read(&hi2c1,LSM303_MAG_ADDR,LSM303_MAG_X_L,I2C_MEMADD_SIZE_8BIT,&regValue[0],1,100);
+	HAL_I2C_Mem_Read(&hi2c1,LSM303_MAG_ADDR,LSM303_MAG_X_H,I2C_MEMADD_SIZE_8BIT,&regValue[1],1,100);
+	HAL_I2C_Mem_Read(&hi2c1,LSM303_MAG_ADDR,LSM303_MAG_Y_L,I2C_MEMADD_SIZE_8BIT,&regValue[2],1,100);
+	HAL_I2C_Mem_Read(&hi2c1,LSM303_MAG_ADDR,LSM303_MAG_Y_H,I2C_MEMADD_SIZE_8BIT,&regValue[3],1,100);
+	HAL_I2C_Mem_Read(&hi2c1,LSM303_MAG_ADDR,LSM303_MAG_Z_L,I2C_MEMADD_SIZE_8BIT,&regValue[4],1,100);
+	HAL_I2C_Mem_Read(&hi2c1,LSM303_MAG_ADDR,LSM303_MAG_Z_H,I2C_MEMADD_SIZE_8BIT,&regValue[5],1,100);
 
 	regValueInt16 = (int16_t *)regValue;
 
@@ -657,9 +649,10 @@ static void get_a_axes(int32_t *pData) {
 
 	get_a_axes_raw(pDataRaw);
 
-	pData[0] = (int32_t) (((pDataRaw[0] >> 6) * LSM303_ACC_Sensitivity_List[1][0] + 500) / 1000);
-	pData[1] = (int32_t) (((pDataRaw[1] >> 6) * LSM303_ACC_Sensitivity_List[1][0] + 500) / 1000);
-	pData[2] = (int32_t) (((pDataRaw[2] >> 6) * LSM303_ACC_Sensitivity_List[1][0] + 500) / 1000);
+	//TODO: get rid of magic numbers
+	pData[0] = (int32_t) (((pDataRaw[0] >> 8) * LSM303_ACC_SENSITIVITY[2][0] + 500) / 1000);
+	pData[1] = (int32_t) (((pDataRaw[1] >> 8) * LSM303_ACC_SENSITIVITY[2][0] + 500) / 1000);
+	pData[2] = (int32_t) (((pDataRaw[2] >> 8) * LSM303_ACC_SENSITIVITY[2][0] + 500) / 1000);
 }
 
 static void get_a_axes_raw(int16_t *pData) {
@@ -668,15 +661,15 @@ static void get_a_axes_raw(int16_t *pData) {
 	int16_t regValueInt16[3] = {[0 ... 2] = 0};
 
 	do
-		HAL_I2C_Mem_Read(&hi2c1,LSM303_ACC_ADDRESS,LSM303_STATUS_REG_A,I2C_MEMADD_SIZE_8BIT,status,1,100);
-	while(!(*status & 0x04));
+		HAL_I2C_Mem_Read(&hi2c1,LSM303_ACC_ADDR,LSM303_ACC_SREG,I2C_MEMADD_SIZE_8BIT,status,1,100);
+	while(!CHECK_BIT(*status,LSM303_ACC_XYZDA));
 
-	HAL_I2C_Mem_Read(&hi2c1,LSM303_ACC_ADDRESS,LSM303_ACC_X_L_A,I2C_MEMADD_SIZE_8BIT,&regValue[0],1,100);
-	HAL_I2C_Mem_Read(&hi2c1,LSM303_ACC_ADDRESS,LSM303_ACC_X_H_A,I2C_MEMADD_SIZE_8BIT,&regValue[1],1,100);
-	HAL_I2C_Mem_Read(&hi2c1,LSM303_ACC_ADDRESS,LSM303_ACC_Y_L_A,I2C_MEMADD_SIZE_8BIT,&regValue[2],1,100);
-	HAL_I2C_Mem_Read(&hi2c1,LSM303_ACC_ADDRESS,LSM303_ACC_Y_H_A,I2C_MEMADD_SIZE_8BIT,&regValue[3],1,100);
-	HAL_I2C_Mem_Read(&hi2c1,LSM303_ACC_ADDRESS,LSM303_ACC_Z_L_A,I2C_MEMADD_SIZE_8BIT,&regValue[4],1,100);
-	HAL_I2C_Mem_Read(&hi2c1,LSM303_ACC_ADDRESS,LSM303_ACC_Z_H_A,I2C_MEMADD_SIZE_8BIT,&regValue[5],1,100);
+	HAL_I2C_Mem_Read(&hi2c1,LSM303_ACC_ADDR,LSM303_ACC_X_L,I2C_MEMADD_SIZE_8BIT,&regValue[0],1,100);
+	HAL_I2C_Mem_Read(&hi2c1,LSM303_ACC_ADDR,LSM303_ACC_X_H,I2C_MEMADD_SIZE_8BIT,&regValue[1],1,100);
+	HAL_I2C_Mem_Read(&hi2c1,LSM303_ACC_ADDR,LSM303_ACC_Y_L,I2C_MEMADD_SIZE_8BIT,&regValue[2],1,100);
+	HAL_I2C_Mem_Read(&hi2c1,LSM303_ACC_ADDR,LSM303_ACC_Y_H,I2C_MEMADD_SIZE_8BIT,&regValue[3],1,100);
+	HAL_I2C_Mem_Read(&hi2c1,LSM303_ACC_ADDR,LSM303_ACC_Z_L,I2C_MEMADD_SIZE_8BIT,&regValue[4],1,100);
+	HAL_I2C_Mem_Read(&hi2c1,LSM303_ACC_ADDR,LSM303_ACC_Z_H,I2C_MEMADD_SIZE_8BIT,&regValue[5],1,100);
 
 	regValueInt16[0] = (regValue[1] << 8) | regValue[0];
 	regValueInt16[1] = (regValue[3] << 8) | regValue[2];
@@ -685,6 +678,13 @@ static void get_a_axes_raw(int16_t *pData) {
 	pData[0] = regValueInt16[0];
 	pData[1] = regValueInt16[1];
 	pData[2] = regValueInt16[2];
+}
+
+static void enterStopMode(uint32_t regulator) {
+	HAL_SuspendTick();
+	__HAL_RCC_PWR_CLK_ENABLE();
+	HAL_PWR_EnterSTOPMode(regulator, PWR_SLEEPENTRY_WFI);
+	HAL_ResumeTick();
 }
 
 void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc) {
