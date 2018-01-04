@@ -9,7 +9,7 @@
   * inserted by the user or by software development tools
   * are owned by their respective copyright owners.
   *
-  * COPYRIGHT(c) 2017 STMicroelectronics
+  * COPYRIGHT(c) 2018 STMicroelectronics
   *
   * Redistribution and use in source and binary forms, with or without modification,
   * are permitted provided that the following conditions are met:
@@ -88,6 +88,7 @@ static void get_m_axes_raw(int16_t *pData);
 static void get_a_axes(int32_t *pData);
 static void get_a_axes_raw(int16_t *pData);
 static void enterStopMode(uint32_t regulator);
+static void enterSleepMode(uint32_t regulator);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -173,6 +174,8 @@ int main(void)
 
 	  /*enterStopMode(PWR_LOWPOWERREGULATOR_ON);
 	  HAL_PWREx_EnableLowPowerRunMode();*/
+	  enterSleepMode(PWR_LOWPOWERREGULATOR_ON);
+	  HAL_PWREx_EnableLowPowerRunMode();
 
 	  if (TRANSMITTING) {
 		  UnsolicitedResponseTail firstTail = buildTail(BAROMETER_FRAME);
@@ -314,7 +317,7 @@ static void MX_RTC_Init(void)
   }
     /**Enable the WakeUp 
     */
-  if (HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, 9250, RTC_WAKEUPCLOCK_RTCCLK_DIV16) != HAL_OK)
+  if (HAL_RTCEx_SetWakeUpTimer_IT(&hrtc, 23125, RTC_WAKEUPCLOCK_RTCCLK_DIV16) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
@@ -688,6 +691,13 @@ static void enterStopMode(uint32_t regulator) {
 	HAL_SuspendTick();
 	__HAL_RCC_PWR_CLK_ENABLE();
 	HAL_PWR_EnterSTOPMode(regulator, PWR_SLEEPENTRY_WFI);
+	HAL_ResumeTick();
+}
+
+static void enterSleepMode(uint32_t regulator) {
+	HAL_SuspendTick();
+	__HAL_RCC_PWR_CLK_ENABLE();
+	HAL_PWR_EnterSLEEPMode(regulator, PWR_SLEEPENTRY_WFI);
 	HAL_ResumeTick();
 }
 
