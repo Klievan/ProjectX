@@ -137,13 +137,13 @@ int main(void)
   HAL_I2C_Mem_Write(&hi2c1,LSM303_MAG_ADDR,LSM303_MAG_CFG_REGA,I2C_MEMADD_SIZE_8BIT,&REG_VALUE,1,HAL_MAX_DELAY);
   while (HAL_I2C_IsDeviceReady(&hi2c1,LSM303_MAG_ADDR,1,HAL_MAX_DELAY) != HAL_OK);
 
-  REG_VALUE = LSM303_MAG_BDU | LSM303_MAG_INT;
+  REG_VALUE = LSM303_MAG_BDU;
   HAL_I2C_Mem_Write(&hi2c1,LSM303_MAG_ADDR,LSM303_MAG_CFG_REGC,I2C_MEMADD_SIZE_8BIT,&REG_VALUE,1,HAL_MAX_DELAY);
   while (HAL_I2C_IsDeviceReady(&hi2c1,LSM303_MAG_ADDR,1,HAL_MAX_DELAY) != HAL_OK);
 
   HAL_Delay(10); // ACC startup time < 5ms
 
-  REG_VALUE = LSM303_ACC_ODR_10HZ | LSM303_ACC_XYZEN | LSM303_ACC_LPEN;
+  REG_VALUE = LSM303_ACC_ODR_1HZ | LSM303_ACC_XYZEN | LSM303_ACC_LPEN;
   HAL_I2C_Mem_Write(&hi2c1,LSM303_ACC_ADDR,LSM303_ACC_CTRL_REG1,I2C_MEMADD_SIZE_8BIT,&REG_VALUE,1,HAL_MAX_DELAY);
   while (HAL_I2C_IsDeviceReady(&hi2c1,LSM303_ACC_ADDR,1,HAL_MAX_DELAY) != HAL_OK);
 
@@ -462,17 +462,12 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 static uint8_t unsolicitedResponseTX(uint8_t* data, uint8_t dataLength) {
-	if ((dataLength + 1 + sizeof(UNSOLICITED_RESPONSE_BASE)) > MESSAGE_MAX_LEN)
-		return 0;
-	else {
-		/*
-		 * Memory allocated with malloc never loses scope until it is forcefully freed using
-		 * the free function or the program terminates.
-		 */
+	if ((dataLength + 1 + sizeof(UNSOLICITED_RESPONSE_BASE)) <= MESSAGE_MAX_LEN) {
+		// Memory allocated with malloc never loses scope until forcefully freed or program termination occurs.
 		uint8_t* unsollicitedResponse = (uint8_t*) malloc((dataLength + 1 + sizeof(UNSOLICITED_RESPONSE_BASE)) * sizeof(uint8_t));
 
 		for (uint8_t i = 0; i < sizeof(UNSOLICITED_RESPONSE_BASE); ++i)
-			unsollicitedResponse[i] = UNSOLICITED_RESPONSE_BASE[i];
+			unsollicitedResponse[i] = ((i == 6) ? (0x0B + 1 + dataLength) : (UNSOLICITED_RESPONSE_BASE[i]));
 
 		unsollicitedResponse[sizeof(UNSOLICITED_RESPONSE_BASE)] = dataLength;
 
@@ -482,8 +477,10 @@ static uint8_t unsolicitedResponseTX(uint8_t* data, uint8_t dataLength) {
 
 		HAL_UART_Transmit(&huart4, unsollicitedResponse, dataLength + 1 + sizeof(UNSOLICITED_RESPONSE_BASE),HAL_MAX_DELAY);
 		free(unsollicitedResponse);
+
+		return 1;
 	}
-	return 1;
+	return 0;
 }
 
 static UnsolicitedResponseTail buildTail(UnsolicitedResponseType urt) {
@@ -533,6 +530,12 @@ static UnsolicitedResponseTail buildTail(UnsolicitedResponseType urt) {
 			dataLength = sizeof(accData)/sizeof(accData[0]);
 			realloc(data,dataLength);
 			memcpy(data,accData,dataLength);
+			break;
+		case TEMPERATURE_FRAME:
+			barometerData = getBarometerData();
+			dataLength = sizeof(barometerData.temperature);
+			realloc(data,dataLength);
+			memcpy(data,&barometerData.temperature,dataLength);
 			break;
 		default:
 			break;
@@ -616,6 +619,7 @@ static void get_m_axes(int32_t *pData) {
 
 	get_m_axes_raw(pDataRaw);
 
+	// multiply by 1.5 through addition and shift right
 	pData[0] = (int32_t) (pDataRaw[0] + (pDataRaw[0] >> 1));
 	pData[1] = (int32_t) (pDataRaw[1] + (pDataRaw[1] >> 1));
 	pData[2] = (int32_t) (pDataRaw[2] + (pDataRaw[2] >> 1));
