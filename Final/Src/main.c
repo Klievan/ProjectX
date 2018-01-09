@@ -61,6 +61,7 @@ UART_HandleTypeDef huart4;
 UART_HandleTypeDef huart5;
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
+DMA_HandleTypeDef hdma_uart4_rx;
 DMA_HandleTypeDef hdma_usart1_rx;
 
 /* USER CODE BEGIN PV */
@@ -128,6 +129,8 @@ static void outdoorSensorFSM();//function call that cycles through the outdoor F
 static void startD7Reception();//function that starts reception of D7 data
 static void uart1DMAConfig();//configures DMA1 Channel 5, which is wired to the UART1_RX request line
 static void uart1DMAStart();//launched DMA task of receiving one byte
+static void uart4DMAConfig();
+static void uart4DMAStart();
 static void GPSParsing();//parses GPS data
 /* USER CODE END PFP */
 
@@ -163,8 +166,13 @@ int main(void)
   MX_DMA_Init();
   MX_I2C1_Init();
   MX_UART4_Init();
+  MX_UART5_Init();
+  MX_USART1_UART_Init();
   MX_USART2_UART_Init();
   MX_RTC_Init();
+
+  uart4DMAConfig();
+  uart4DMAStart();
 
   /* USER CODE BEGIN 2 */
   HAL_PWREx_EnableLowPowerRunMode();
@@ -451,12 +459,16 @@ static void MX_USART2_UART_Init(void)
 static void MX_DMA_Init(void) 
 {
   /* DMA controller clock enable */
+  __HAL_RCC_DMA2_CLK_ENABLE();
   __HAL_RCC_DMA1_CLK_ENABLE();
 
   /* DMA interrupt init */
   /* DMA1_Channel5_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel5_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel5_IRQn);
+  /* DMA2_Channel3_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA2_Channel3_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA2_Channel3_IRQn);
 
 }
 
@@ -1110,11 +1122,12 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle){
 		default: break;
 		}
 	} else if(UartHandle == &huart4){
+		__HAL_UART_FLUSH_DRREGISTER(&huart4);// flush whatever is in the registers by now, must do to prevent overrun
 		if (strstr(dash7Cmd, "\x0A\x32\x81\x0D") != NULL){
 			// /n 2 0b0000 0001 /r
 			outdoorSensorState = enabling;
 		}
-		if(strstr(dash7Cmd, "\x0A\x32\x80\x0D") != NULL){
+		if (strstr(dash7Cmd, "\x0A\x32\x80\x0D") != NULL){
 			// /n 2 0b0000 0000 /r
 			outdoorSensorState = disabling;
 		}
@@ -1122,11 +1135,9 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle){
 #ifndef NSERDEBUG
 		HAL_UART_Transmit_IT(&huart2, "received command", strlen("received command"));
 #endif
-
 		//don't forget to clear the dash7Cmd and reinstate the waiting for incoming bytes
-		__HAL_UART_FLUSH_DRREGISTER(&huart4);// flush whatever is in the registers by now
 		memset(dash7Cmd, 0, sizeof(dash7Cmd)/sizeof(char));//reset  dash7cmd
-		HAL_UART_Receive_IT(&huart4, dash7Cmd, 15);//Start receive cycle again
+		//HAL_UART_Receive_IT(&huart4, dash7Cmd, 15);//Start receive cycle again
 	} else if(UartHandle == &huart1){
 		GPSParsing();
 	} else {
@@ -1164,6 +1175,26 @@ void uart1DMAConfig(){
 
 void uart1DMAStart(){
 	HAL_UART_Receive_DMA(&huart1, &GPSdata, 1);
+}
+
+void uart4DMAConfig(){
+	hdma_uart4_rx.Instance = DMA2_Channel3;
+	hdma_uart4_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;
+	hdma_uart4_rx.Init.PeriphInc = DMA_PINC_DISABLE;
+	hdma_uart4_rx.Init.MemInc = DMA_MINC_ENABLE;
+	hdma_uart4_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+	hdma_uart4_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+	hdma_uart4_rx.Init.Mode = DMA_CIRCULAR;
+	hdma_uart4_rx.Init.Priority = DMA_PRIORITY_LOW;
+	HAL_DMA_Init(&hdma_uart4_rx);
+
+	__HAL_LINKDMA(&huart4, hdmarx, hdma_uart4_rx);
+
+	HAL_NVIC_SetPriority(UART4_IRQn, 0,0);
+	HAL_NVIC_EnableIRQ(UART4_IRQn);
+}
+void uart4DMAStart(){
+	HAL_UART_Receive_DMA(&huart4, &dash7Cmd, 15);
 }
 
 void GPSParsing(){
