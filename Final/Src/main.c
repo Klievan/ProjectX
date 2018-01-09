@@ -211,7 +211,7 @@ int main(void)
 
   HAL_Delay(10); // wait for changes to take effect
 
-  getHardIronFault();
+  // getHardIronFault();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -228,8 +228,9 @@ int main(void)
 		  UnsolicitedResponseTail firstTail = buildTail(BAROMETER_FRAME);
 		  UnsolicitedResponseTail secondTail = buildTail(MAGNETOMETER_FRAME);
 		  UnsolicitedResponseTail thirdTail = buildTail(ACCELEROMETER_FRAME);
-		  UnsolicitedResponseTail fourthTail = buildTail(COMPASS_FRAME);
-		  UnsolicitedResponseTail tail = mergeTails(mergeTails(firstTail,secondTail),mergeTails(thirdTail,fourthTail));
+		  /*UnsolicitedResponseTail fourthTail = buildTail(COMPASS_FRAME);
+		  UnsolicitedResponseTail tail = mergeTails(mergeTails(firstTail,secondTail),mergeTails(thirdTail,fourthTail));*/
+		  UnsolicitedResponseTail tail = mergeTails(firstTail,mergeTails(secondTail,thirdTail));
 		  unsolicitedResponseTX(tail.data,tail.dataLength);
 		  TRANSMITTING = 0;
 	  }
