@@ -39,6 +39,7 @@
 #define LSM303_ACC_Z_H 			0x2D
 
 // LSM303AGR ACC register settings
+#define LSM303_ACC_PWR_DWN		0x00
 #define LSM303_ACC_ODR_1HZ		0x10
 #define LSM303_ACC_ODR_10HZ		0x20
 #define LSM303_ACC_ODR_25HZ		0x30
@@ -82,11 +83,19 @@
 #define LSM303_MAG_LPEN			0x10
 #define LSM303_MAG_MD_CON		0x00
 #define LSM303_MAG_MD_SIN		0x01
+#define LSM303_MAG_MD_IDLE		0x03
 #define LSM303_MAG_BDU			0x10
 #define LSM303_MAG_INT			0x01
+#define LSM303_MAG_OFF_CANC		0x02
+#define LSM303_MAG_LPF			0x01
 
 // LSM303AGR MAG register values
 #define LSM303_MAG_XYZDA		0x04
+
+// LSM303AGR Axes
+#define X 0
+#define Y 1
+#define Z 2
 
 const uint8_t MESSAGE_MAX_LEN	= 0xFF;
 const uint8_t FLOOD_TAIL[] 		= {0x6B,0x61,0x6B,0x61};

@@ -33,4 +33,10 @@ typedef struct {
 	int32_t zValue;
 } AccelerometerData;
 
+typedef struct {
+	double pitch;
+	double roll;
+	double yaw;
+} CompassData;
+
 #endif /* STRUCTURES_H_ */
