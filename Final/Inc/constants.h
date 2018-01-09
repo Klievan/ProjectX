@@ -129,4 +129,8 @@ const uint8_t UNSOLICITED_RESPONSE_BASE[] = {0x41,0x54,0x24,0x44,0xC0,0x00, // u
 											 0xB4,0x13,0x32,0xD7,0x00,0x00,0x10,0x01, // indirect forward + operand
 											 0x20,0x40,0x00}; // return file data action with fileID = 40 and offset = 0
 
+const char AT_join_cmd[] = "AT+JOIN\r\n";
+const char AT_SEND_cmd[] = "AT+SEND=2:";
+const char AT_NJS_cmd[] = "AT+NJS=?\r\n";
+
 #endif /* CONSTANTS_H_ */
