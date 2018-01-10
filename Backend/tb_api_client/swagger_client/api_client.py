@@ -466,6 +466,7 @@ class ApiClient(object):
             return ', '.join(accepts)
 
     def select_header_content_type(self, content_types):
+        # type: (object) -> object
         """
         Returns `Content-Type` based on an array of content_types provided.
 
