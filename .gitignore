@@ -52,3 +52,7 @@ Mkfile.old
 dkms.conf
 
 dash7-send/\.idea/
+
+Backend/\.idea/workspace\.xml
+
+Backend/\.idea/
