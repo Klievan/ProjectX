@@ -9,8 +9,8 @@ var searchData=
   ['getcompassdata',['getCompassData',['../main_8c.html#a49d037d32b0bbbc1882efe645618b6ab',1,'main.c']]],
   ['gethardironfault',['getHardIronFault',['../main_8c.html#a17162e72cea6a92bd4ff599e5522d96f',1,'main.c']]],
   ['getmagnetometerdata',['getMagnetometerData',['../main_8c.html#ac42c7257a672ffc59aa277693506988b',1,'main.c']]],
-  ['gpsdata',['GPSdata',['../main_8c.html#a68f42d0a20d325f90f257d2b24ba48c9',1,'main.c']]],
+  ['gpsdata',['GPSdata',['../main_8c.html#a61af40cb5390df883da26ef9e3e266b8',1,'main.c']]],
   ['gpsdataarrived',['GPSdataArrived',['../main_8c.html#aef9326a5dab04749bd8ad8a7ab1465e3',1,'main.c']]],
-  ['gpsdmabfr',['GPSDMABfr',['../main_8c.html#aef038d21d6d0ca76b7993f6d0d59bc6d',1,'main.c']]],
+  ['gpsdmabfr',['GPSDMABfr',['../main_8c.html#a495ed71cef42ca90785d6e11e61d11ca',1,'main.c']]],
   ['gpsparsing',['GPSParsing',['../main_8c.html#a96d59cc4b82360ef4366cd9530db4fc6',1,'main.c']]]
 ];
