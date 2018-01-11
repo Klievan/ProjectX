@@ -70,7 +70,7 @@ DMA_HandleTypeDef hdma_usart1_rx;
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 static volatile uint8_t TRANSMITTING = 0;
-static int32_t hardIronFault[] = {0, 0, 0};
+static int32_t hardIronFault[] = {0, 0, 0}; /**< Test */
 
 //Variables used for LoRaWAN
 
@@ -568,6 +568,13 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+/**
+ * @brief Sets the global hard iron offset.
+ *
+ * In order to get the hard iron offset you need to perform a pretzel
+ * like motion with the LSM303 sensor in order to cover as much points
+ * in space as possible.
+ */
 static void getHardIronFault() {
 	int32_t mag_temp[3] = {0, 0, 0};
 	int32_t mag_max[3] = {-2147483647, -2147483647, -2147483647};
@@ -604,16 +611,36 @@ static void getHardIronFault() {
 #endif
 }
 
+/**
+ * @brief Transmit an unsolicited response over the D7 interface.
+ *
+ * In order to transmit a message over the D7 RF link a serial frame is built
+ * containing all necessary information for the receiving D7 modem in order
+ * to propagate (a part of) said frame over the D7 RF link.
+ *
+ * @param data Pointer to data buffer, will be freed.
+ * @param dataLength Amount of bytes in data buffer.
+ * @return Returns 1 if successful and 0 otherwise.
+ */
 static uint8_t unsolicitedResponseTX(uint8_t* data, uint8_t dataLength) {
 	if ((dataLength + 1 + sizeof(UNSOLICITED_RESPONSE_BASE)) <= MESSAGE_MAX_LEN) {
 		// Memory allocated with malloc never loses scope until forcefully freed or program termination occurs.
 		uint8_t* unsollicitedResponse = (uint8_t*) malloc((dataLength + 1 + sizeof(UNSOLICITED_RESPONSE_BASE)) * sizeof(uint8_t));
 
+		/*
+		 * UNSOLICITED_RESPONSE_BASE is a pointer to a memory location for a partially fixed
+		 * preamble that is the same for all unsolicited responses. Only the ALP cmd length
+		 * byte needs to be modified to accommodate the yet unknown data length. The cmd length
+		 * byte is the sixth byte, hence the ternary operator. 0x0B is the length of the remaining
+		 * preamble bytes and 1 byte is needed for the data length byte.
+		 */
 		for (uint8_t i = 0; i < sizeof(UNSOLICITED_RESPONSE_BASE); ++i)
 			unsollicitedResponse[i] = ((i == 6) ? (0x0B + 1 + dataLength) : (UNSOLICITED_RESPONSE_BASE[i]));
 
+		// set the datalength byte
 		unsollicitedResponse[sizeof(UNSOLICITED_RESPONSE_BASE)] = dataLength;
 
+		// fill the remaining bytes with data
 		for (uint8_t i = 0; i < dataLength; ++i)
 			unsollicitedResponse[sizeof(UNSOLICITED_RESPONSE_BASE) + 1 + i] = data[i];
 		free(data);
@@ -626,6 +653,17 @@ static uint8_t unsolicitedResponseTX(uint8_t* data, uint8_t dataLength) {
 	return 0;
 }
 
+/**
+ * @brief Builds a frame tail.
+ *
+ * Since the preamble of an unsollicited response is always identical (except for the
+ * ALP cmd length byte) one can simply add a different tail to the preamble. In order
+ * to do that several types of frames where defined.
+ *
+ * @param urt Enumeration indicating the frame (tail) type.
+ * @return Returns a frame tail structure containing data and length.
+ * @note The data pointer needs to be freed after transmission.
+ */
 static UnsolicitedResponseTail buildTail(UnsolicitedResponseType urt) {
 	/*
 	 * Memory allocated with malloc never loses scope until it is forcefully freed using
@@ -696,6 +734,9 @@ static UnsolicitedResponseTail buildTail(UnsolicitedResponseType urt) {
 	return tail;
 }
 
+/**
+ * @brief Merges two frame tails and returns a new one.
+ */
 static UnsolicitedResponseTail mergeTails(UnsolicitedResponseTail firstTail,UnsolicitedResponseTail secondTail) {
 	UnsolicitedResponseTail tempTail;
 	// memory allocated with malloc never loses scope until it is forcefully freed
@@ -710,6 +751,12 @@ static UnsolicitedResponseTail mergeTails(UnsolicitedResponseTail firstTail,Unso
 	return tempTail;
 }
 
+/**
+ * @brief Converts a two's complement number to a signed integer.
+ * @param sbi Position of sign bit in @p rawValue
+ * @param rawValue Unsigned integer containing two's complement number.
+ * @return Returns a signed integer.
+ */
 int64_t twosComplementToSignedInteger(uint32_t rawValue,SignBitIndex sbi) {
 	switch (sbi) {
 		case TWOS_COMPLEMENT_24_BIT:
@@ -729,6 +776,9 @@ int64_t twosComplementToSignedInteger(uint32_t rawValue,SignBitIndex sbi) {
 	}
 }
 
+/**
+ * @brief Get pressure and temperature data from LPS22HB barometer.
+ */
 static BarometerData getBarometerData() {
 	uint8_t rawSensorData[5];
 	BarometerData barometerData;
@@ -745,6 +795,10 @@ static BarometerData getBarometerData() {
 	return barometerData;
 }
 
+/**
+ * @brief Get yaw, pitch and roll from compass.
+ * @note Although mostly complete, this code is still very much under construction.
+ */
 static CompassData getCompassData() {
 	double temp[] = {0.0,0.0,0.0};
 	int32_t magData[] = {0,0,0};
@@ -794,6 +848,7 @@ static CompassData getCompassData() {
 	sprintf(message, "Degrees: %6lf\r\n", degrees);
 	HAL_UART_Transmit(&huart2, (uint8_t *) message, strlen(message), HAL_MAX_DELAY);
 
+	// every 45° degrees indicates another direction
 	if(degrees > 22.5 && degrees < 67.5)
 		sprintf(message, "Direction: North-East\r\n");
 	else if(degrees > 67.5 && degrees < 112.5)
@@ -820,6 +875,13 @@ static CompassData getCompassData() {
 	return compassData;
 }
 
+/**
+ * @brief Get compensated data from magnetometer
+ *
+ * If the hard iron fault was previously set using the appropriate function
+ * the data obtained will be automatically compensated with said offsets.
+ * Otherwise an offset of 0 is deducted, which equals no correction.
+ */
 static MagnetometerData getMagnetometerData() {
 	int32_t axes_m[3];
 	get_m_axes(axes_m);
@@ -830,6 +892,9 @@ static MagnetometerData getMagnetometerData() {
 	return magnetometerData;
 }
 
+/**
+ * @brief Get data from accelerometer.
+ */
 static AccelerometerData getAccelerometerData() {
 	int32_t axes_a[3];
 	get_a_axes(axes_a);
