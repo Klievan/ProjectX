@@ -8,9 +8,6 @@
 #ifndef STRUCTURES_H_
 #define STRUCTURES_H_
 
-/**
- * @note WARNING: free the data pointer after use!
- */
 typedef struct {
 	uint8_t *data;
 	uint8_t dataLength;
