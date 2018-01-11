@@ -9,13 +9,13 @@
 #define STRUCTURES_H_
 
 typedef struct {
-	uint8_t *data;
-	uint8_t dataLength;
+	uint8_t *data; /**< Pointer to data location. @note Needs to be freed after use! */
+	uint8_t dataLength; /**< Length of data in bytes. */
 } UnsolicitedResponseTail;
 
 typedef struct {
-	int32_t pressure;
-	int32_t temperature;
+	int32_t pressure; /**< Pressure in mbar. */
+	int32_t temperature; /**< Temperature in °C. */
 } BarometerData;
 
 typedef struct {
@@ -31,9 +31,9 @@ typedef struct {
 } AccelerometerData;
 
 typedef struct {
-	double pitch;
-	double roll;
-	double yaw;
+	double pitch; /**< Pitch angle in radians, also known as &theta;. */
+	double roll; /**< Roll angle in radians, also known as &phi;. */
+	double yaw; /**< Yaw angle in radians, also known as &psi;. */
 } CompassData;
 
 #endif /* STRUCTURES_H_ */

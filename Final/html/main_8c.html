@@ -131,6 +131,7 @@ Functions</h2></td></tr>
 <tr class="memdesc:a361a2824024c10bd31b3540adb6158aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get data from accelerometer.  <a href="#a361a2824024c10bd31b3540adb6158aa">More...</a><br /></td></tr>
 <tr class="separator:a361a2824024c10bd31b3540adb6158aa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa9f5e65fec65e776ef38c093a2527bf8"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#aa9f5e65fec65e776ef38c093a2527bf8">get_m_axes</a> (int32_t *pData)</td></tr>
+<tr class="memdesc:aa9f5e65fec65e776ef38c093a2527bf8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get signed and uncompensated axes data from magnetometer.  <a href="#aa9f5e65fec65e776ef38c093a2527bf8">More...</a><br /></td></tr>
 <tr class="separator:aa9f5e65fec65e776ef38c093a2527bf8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa6776b47a46e5a46f0a9c4e900ea8e86"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#aa6776b47a46e5a46f0a9c4e900ea8e86">get_m_axes_raw</a> (int16_t *pData)</td></tr>
 <tr class="separator:aa6776b47a46e5a46f0a9c4e900ea8e86"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -209,20 +210,20 @@ Variables</h2></td></tr>
 <tr class="separator:afcb302a60dfdb744a0871bbbd26b92af"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a19122ba88f69178b796419485a2e5c4a"><td class="memItemLeft" align="right" valign="top">static char&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#a19122ba88f69178b796419485a2e5c4a">AT_return_code</a> [7] = &quot;&quot;</td></tr>
 <tr class="separator:a19122ba88f69178b796419485a2e5c4a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa43f5a6a51b97b7def100946120b1dd6"><td class="memItemLeft" align="right" valign="top">static uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#aa43f5a6a51b97b7def100946120b1dd6">loRaWANSendCmdAndData</a> [31] = &quot;&quot;</td></tr>
-<tr class="separator:aa43f5a6a51b97b7def100946120b1dd6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3cc666adfaac7fc2e2e6cd823b6cb165"><td class="memItemLeft" align="right" valign="top">static uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#a3cc666adfaac7fc2e2e6cd823b6cb165">LoRaWANGPSdata</a> [21] = &quot;00.000000|000.000000&quot;</td></tr>
-<tr class="separator:a3cc666adfaac7fc2e2e6cd823b6cb165"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acf7f1c6e82d761adc0d38637d342da64"><td class="memItemLeft" align="right" valign="top">static uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#acf7f1c6e82d761adc0d38637d342da64">loRaWANSendCmdAndData</a> [39] = &quot;&quot;</td></tr>
+<tr class="separator:acf7f1c6e82d761adc0d38637d342da64"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2d36ee219e2b3143e61a2c622d2b9e01"><td class="memItemLeft" align="right" valign="top">static uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#a2d36ee219e2b3143e61a2c622d2b9e01">LoRaWANGPSdata</a> [29] = &quot;00;00;.0000|000;00;.0000|0.0&quot;</td></tr>
+<tr class="separator:a2d36ee219e2b3143e61a2c622d2b9e01"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac792a67265fc78019b38894098457f3f"><td class="memItemLeft" align="right" valign="top">static volatile uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#ac792a67265fc78019b38894098457f3f">sendLoRaWANdata</a> = 0</td></tr>
 <tr class="separator:ac792a67265fc78019b38894098457f3f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7355d85397989e089211c6f025e770c9"><td class="memItemLeft" align="right" valign="top">static volatile uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#a7355d85397989e089211c6f025e770c9">loRaWANStateTransition</a> = 0</td></tr>
 <tr class="separator:a7355d85397989e089211c6f025e770c9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a709aa8025fdb4438268dcb429c631a21"><td class="memItemLeft" align="right" valign="top">static volatile uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#a709aa8025fdb4438268dcb429c631a21">LoRaWAN10SecCnter</a> = 0</td></tr>
 <tr class="separator:a709aa8025fdb4438268dcb429c631a21"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a68f42d0a20d325f90f257d2b24ba48c9"><td class="memItemLeft" align="right" valign="top">static volatile uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#a68f42d0a20d325f90f257d2b24ba48c9">GPSdata</a> [103] = &quot;&quot;</td></tr>
-<tr class="separator:a68f42d0a20d325f90f257d2b24ba48c9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aef038d21d6d0ca76b7993f6d0d59bc6d"><td class="memItemLeft" align="right" valign="top">static volatile uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#aef038d21d6d0ca76b7993f6d0d59bc6d">GPSDMABfr</a> [103] = &quot;&quot;</td></tr>
-<tr class="separator:aef038d21d6d0ca76b7993f6d0d59bc6d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a61af40cb5390df883da26ef9e3e266b8"><td class="memItemLeft" align="right" valign="top">static volatile uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#a61af40cb5390df883da26ef9e3e266b8">GPSdata</a> [153] = &quot;&quot;</td></tr>
+<tr class="separator:a61af40cb5390df883da26ef9e3e266b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a495ed71cef42ca90785d6e11e61d11ca"><td class="memItemLeft" align="right" valign="top">static volatile uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#a495ed71cef42ca90785d6e11e61d11ca">GPSDMABfr</a> [153] = &quot;&quot;</td></tr>
+<tr class="separator:a495ed71cef42ca90785d6e11e61d11ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aef9326a5dab04749bd8ad8a7ab1465e3"><td class="memItemLeft" align="right" valign="top">static volatile uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#aef9326a5dab04749bd8ad8a7ab1465e3">GPSdataArrived</a> = 0</td></tr>
 <tr class="separator:aef9326a5dab04749bd8ad8a7ab1465e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad4da1adae3ff0cc2c4e5cd634d719d76"><td class="memItemLeft" align="right" valign="top">static volatile uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#ad4da1adae3ff0cc2c4e5cd634d719d76">LoRaWANdataArrived</a> = 0</td></tr>
@@ -487,6 +488,14 @@ Variables</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
+
+<p>Get signed and uncompensated axes data from magnetometer. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">pData</td><td>Pointer to memory location to which the signed axes data is to be written. </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>
@@ -1416,8 +1425,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="a68f42d0a20d325f90f257d2b24ba48c9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a68f42d0a20d325f90f257d2b24ba48c9">&#9670;&nbsp;</a></span>GPSdata</h2>
+<a id="a61af40cb5390df883da26ef9e3e266b8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a61af40cb5390df883da26ef9e3e266b8">&#9670;&nbsp;</a></span>GPSdata</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1426,7 +1435,7 @@ Variables</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">volatile uint8_t GPSdata[103] = &quot;&quot;</td>
+          <td class="memname">volatile uint8_t GPSdata[153] = &quot;&quot;</td>
         </tr>
       </table>
   </td>
@@ -1460,8 +1469,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="aef038d21d6d0ca76b7993f6d0d59bc6d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aef038d21d6d0ca76b7993f6d0d59bc6d">&#9670;&nbsp;</a></span>GPSDMABfr</h2>
+<a id="a495ed71cef42ca90785d6e11e61d11ca"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a495ed71cef42ca90785d6e11e61d11ca">&#9670;&nbsp;</a></span>GPSDMABfr</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1470,7 +1479,7 @@ Variables</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">volatile uint8_t GPSDMABfr[103] = &quot;&quot;</td>
+          <td class="memname">volatile uint8_t GPSDMABfr[153] = &quot;&quot;</td>
         </tr>
       </table>
   </td>
@@ -1670,8 +1679,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="a3cc666adfaac7fc2e2e6cd823b6cb165"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3cc666adfaac7fc2e2e6cd823b6cb165">&#9670;&nbsp;</a></span>LoRaWANGPSdata</h2>
+<a id="a2d36ee219e2b3143e61a2c622d2b9e01"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2d36ee219e2b3143e61a2c622d2b9e01">&#9670;&nbsp;</a></span>LoRaWANGPSdata</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1680,7 +1689,7 @@ Variables</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">uint8_t LoRaWANGPSdata[21] = &quot;00.000000|000.000000&quot;</td>
+          <td class="memname">uint8_t LoRaWANGPSdata[29] = &quot;00;00;.0000|000;00;.0000|0.0&quot;</td>
         </tr>
       </table>
   </td>
@@ -1692,8 +1701,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="aa43f5a6a51b97b7def100946120b1dd6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa43f5a6a51b97b7def100946120b1dd6">&#9670;&nbsp;</a></span>loRaWANSendCmdAndData</h2>
+<a id="acf7f1c6e82d761adc0d38637d342da64"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acf7f1c6e82d761adc0d38637d342da64">&#9670;&nbsp;</a></span>loRaWANSendCmdAndData</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1702,7 +1711,7 @@ Variables</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">uint8_t loRaWANSendCmdAndData[31] = &quot;&quot;</td>
+          <td class="memname">uint8_t loRaWANSendCmdAndData[39] = &quot;&quot;</td>
         </tr>
       </table>
   </td>

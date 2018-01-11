@@ -241,8 +241,10 @@ int main(void)
 
   /* USER CODE BEGIN 3 */
 	  enterSleepMode(PWR_LOWPOWERREGULATOR_ON);
-	  HAL_UART_Transmit(&huart2, "looping...\r\n", strlen("looping...\r\n"), HAL_MAX_DELAY);
 	  HAL_PWREx_EnableLowPowerRunMode();
+#ifndef NSERDEBUG
+	  HAL_UART_Transmit(&huart2, "looping...\r\n", strlen("looping...\r\n"), HAL_MAX_DELAY);
+#endif
 	  GPSParsing();
 	  LoRaWANParsing();
 	  D7Parsing();
@@ -905,6 +907,10 @@ static AccelerometerData getAccelerometerData() {
 	return accelerometerData;
 }
 
+/**
+ * @brief Get signed and uncompensated axes data from magnetometer.
+ * @param pData Pointer to memory location to which the signed axes data is to be written.
+ */
 static void get_m_axes(int32_t *pData) {
 	int16_t pDataRaw[3];
 
