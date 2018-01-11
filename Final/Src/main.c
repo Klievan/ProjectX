@@ -49,7 +49,7 @@
 #include "constants.h"
 #include "structures.h"
 #include "macros.h"
-// #define NSERDEBUG // comment to turn on serial debug over UART2
+#define NSERDEBUG // comment to turn on serial debug over UART2
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -80,7 +80,7 @@ static volatile uint8_t D7DMABfr [16] = "";//these arrays are used for double bu
 // current device mapping is [x x x x x x x GPS] (only gps pretty much)
 
 //Variables used for GPS and LoRaWAN
-static volatile LoRaWANState loRaWANState = tx_rx;
+static volatile LoRaWANState loRaWANState = startup;
 static char AT_return_code[7] = "";//contains the AT_return_code
 //must be reset to all \0 using memset after every use
 static uint8_t loRaWANSendCmdAndData[31] = "";// AT send cmd + LoRaWANGPSdata = 31 bytes (including null terminator)
@@ -177,8 +177,6 @@ int main(void)
   /* USER CODE BEGIN 2 */
   HAL_PWREx_EnableLowPowerRunMode();
 
-  HAL_DBGMCU_EnableDBGSleepMode();
-
   /* configure DMA for UART 1*/
   uart1DMAConfig();//config the DMA used by uart1
   uart1DMAStart();//start DMA reception on this uart
@@ -232,7 +230,9 @@ int main(void)
 
   /* USER CODE BEGIN 3 */
 	  enterSleepMode(PWR_LOWPOWERREGULATOR_ON);
+#ifndef NSERDEBUG
 	  HAL_UART_Transmit(&huart2, "looping...\r\n", strlen("looping...\r\n"), HAL_MAX_DELAY);
+#endif
 	  HAL_PWREx_EnableLowPowerRunMode();
 	  GPSParsing();
 	  LoRaWANParsing();
@@ -959,7 +959,7 @@ static uint8_t verifyLoRaNetworkjoin(){
 		__HAL_UART_FLUSH_DRREGISTER(&huart5);
 		HAL_UART_Receive_IT(&huart5, (uint8_t*)AT_return_code, 3);
 		//HAL_UART_Transmit_IT(&huart5, (uint8_t*)AT_NJS_cmd, strlen(AT_NJS_cmd));//strlen excludes \0 so it's ok
-		HAL_UART_Transmit(&huart5, (uint8_t*)AT_NJS_cmd, 8, HAL_MAX_DELAY);//strlen excludes \0 so it's ok
+		HAL_UART_Transmit(&huart5, (uint8_t*)AT_NJS_cmd, strlen(AT_NJS_cmd), HAL_MAX_DELAY);//strlen excludes \0 so it's ok
 		return 0;
 		//if the UART was not busy, the command is being sent;
 		//verify success once receive is done.
@@ -1172,6 +1172,7 @@ static void GPSParsing(){
 			startOfGPSFrame = strstr(GPSdata, "$GPGLL");
 			//First verify if sequence is found, the GPS transmits a lot of data on startup so it is possible there is not frame
 			if(startOfGPSFrame != NULL){
+				//next, replace all \n and \r with \0 by strtok
 				//next verify if at least an entire frame is captures, again, possible due to startup data that the start is captured, but not the entire frame
 				//after startup these problems should be nonexistend as the buffer can contain 2 full frames, resulting in at least 1 whole frame at all times
 				if(strlen(startOfGPSFrame)>50){
