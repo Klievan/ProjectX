@@ -49,7 +49,10 @@
 #include "constants.h"
 #include "structures.h"
 #include "macros.h"
-// #define NSERDEBUG // comment to turn on serial debug over UART2
+
+//#define NSERDEBUG // comment to turn on serial debug over UART2
+#define NCOMPASS // comment to turn on compass data retrieval
+
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -175,6 +178,10 @@ int main(void)
   MX_RTC_Init();
 
   /* USER CODE BEGIN 2 */
+#if defined(NCOMPASS) && defined(NSERDEBUG)
+  HAL_UART_DeInit(&huart2);
+#endif
+
   HAL_PWREx_EnableLowPowerRunMode();
 
   HAL_DBGMCU_EnableDBGSleepMode();
@@ -221,7 +228,9 @@ int main(void)
 
   HAL_Delay(10); // wait for changes to take effect
 
-  // getHardIronFault();
+#ifndef NCOMPASS
+  getHardIronFault();
+#endif
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -242,9 +251,12 @@ int main(void)
 		  UnsolicitedResponseTail firstTail = buildTail(BAROMETER_FRAME);
 		  UnsolicitedResponseTail secondTail = buildTail(MAGNETOMETER_FRAME);
 		  UnsolicitedResponseTail thirdTail = buildTail(ACCELEROMETER_FRAME);
-		  /*UnsolicitedResponseTail fourthTail = buildTail(COMPASS_FRAME);
-		  UnsolicitedResponseTail tail = mergeTails(mergeTails(firstTail,secondTail),mergeTails(thirdTail,fourthTail));*/
-		  UnsolicitedResponseTail tail = mergeTails(firstTail,mergeTails(secondTail,thirdTail));
+#ifndef NCOMPASS
+		  UnsolicitedResponseTail fourthTail = buildTail(COMPASS_FRAME);
+		  UnsolicitedResponseTail tail = mergeTails(mergeTails(firstTail,secondTail),mergeTails(thirdTail,fourthTail));
+#else
+		  UnsolicitedResponseTail tail = mergeTails(mergeTails(firstTail,secondTail),thirdTail);
+#endif
 		  unsolicitedResponseTX(tail.data,tail.dataLength);
 		  TRANSMITTING = 0;
 	  }
