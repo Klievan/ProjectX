@@ -86,13 +86,13 @@ static volatile uint8_t D7DMABfr [16] = "";//these arrays are used for double bu
 static volatile LoRaWANState loRaWANState = tx_rx;
 static char AT_return_code[7] = "";//contains the AT_return_code
 //must be reset to all \0 using memset after every use
-static uint8_t loRaWANSendCmdAndData[31] = "";// AT send cmd + LoRaWANGPSdata = 31 bytes (including null terminator)
-static uint8_t LoRaWANGPSdata[21] = "00.000000|000.000000";//LoRaWAN GPS data, is 9 characters lat, 10 characters lon and pipe seperator + \0 = 21, parsed from GPSdata
+static uint8_t loRaWANSendCmdAndData[39] = "";// AT send cmd + LoRaWANGPSdata = 31 bytes (including null terminator)
+static uint8_t LoRaWANGPSdata[29] = "00;00;.0000|000;00;.0000|0.0";//LoRaWAN GPS data, is 9 characters lat, 10 characters lon and pipe seperator + \0 = 21, parsed from GPSdata
 static volatile uint8_t sendLoRaWANdata = 0;// set to 1 when a LoRaWAN message may be transmitted
 static volatile uint8_t loRaWANStateTransition = 0;// set to 1 when the LoRaWAN FSM may (possibly) change states
 static volatile uint8_t LoRaWAN10SecCnter = 0;//counter that gets incremented every time the RTX wakes up. This is to make sure a LoRaWAN message is only sent every 60 sec
-static volatile uint8_t GPSdata[103] = "";// raw GPS data, contains at least 1 whole GPS string
-static volatile uint8_t GPSDMABfr[103] = "";//these registers are used for double buffering the GPS data
+static volatile uint8_t GPSdata[153] = "";// raw GPS data, contains at least 1 whole GPS string
+static volatile uint8_t GPSDMABfr[153] = "";//these registers are used for double buffering the GPS data
 static volatile uint8_t GPSdataArrived = 0;
 static volatile uint8_t LoRaWANdataArrived = 0;
 static volatile uint8_t D7dataArrived = 0;
@@ -1118,7 +1118,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle){
 		D7dataArrived = 1;// mark data as arrived
 	} else if(UartHandle == &huart1){
 		__HAL_UART_FLUSH_DRREGISTER(&huart1);// flush DDR to prevent overrun while we execute the next two commands
-		memcpy(GPSdata, GPSDMABfr, 102);// copy content to new buffer
+		memcpy(GPSdata, GPSDMABfr, 152);// copy content to new buffer
 		GPSdataArrived = 1;// mark data as arrived
 	} else {
 		//insert code here
@@ -1149,7 +1149,7 @@ static void uart1DMAConfig(){
 }
 
 static void uart1DMAStart(){
-	HAL_UART_Receive_DMA(&huart1, GPSDMABfr, 102);
+	HAL_UART_Receive_DMA(&huart1, GPSDMABfr, 152);
 }
 
 static void uart4DMAConfig(){
@@ -1178,19 +1178,31 @@ static void GPSParsing(){
 			//Variables to temporary hold latitude and longitude;
 			uint8_t latitude[10] = "";
 			uint8_t longitude[11] = "";
-			uint8_t dataValid[2] = "";
+			uint8_t fixValid[2] = "";
+			uint8_t satUsed[3] = "";
+			uint8_t HDOP[4] = "";//unsure what the maximum HDOP is so I included one extra byte
 			//find start of command
 			uint8_t* startOfGPSFrame;
-			startOfGPSFrame = strstr(GPSdata, "$GPGLL");
+			startOfGPSFrame = strstr(GPSdata, "$GPGGA");
 			//First verify if sequence is found, the GPS transmits a lot of data on startup so it is possible there is not frame
 			if(startOfGPSFrame != NULL){
-				//next verify if at least an entire frame is captures, again, possible due to startup data that the start is captured, but not the entire frame
+				//next, replace all occurences of \n and \r with \0, using strtok
+				//reason being: when the GPS doesn't receive latitude and longitude, but it does receive a timesignal of sort, it transmits an incomplete frame
+				//in the unlikely event that there is an A on what we parse as datavalid field, this will result in nullpointer errors, aka no good
+				//this by replacing \n and \r with \0 we can later check if we received a complete frame of 51 bytes.
+				uint8_t* tempptr = strtok(startOfGPSFrame, "\r\n");
+				while (tempptr != NULL)
+					tempptr = strtok(NULL, "\r\n");
+				//next verify if an entire frame is captures, again, possible due to startup data that the start is captured, but not the entire frame
 				//after startup these problems should be nonexistend as the buffer can contain 2 full frames, resulting in at least 1 whole frame at all times
-				if(strlen(startOfGPSFrame)>50){
+				//however if the GPS sends incomplete frames due to missing data we mustn't parse them.
+				if(strlen(startOfGPSFrame)>73){
 					//now we need to tokenate this string, not all tokens are needed though, thus some are dropped, and the loop is unrolled to save a few cycles time
 					uint8_t* startOfField;
 					startOfField = strtok(startOfGPSFrame, ",");//the delimiter is ","
-					//the first field returned is Message ID, is always $GPGLL, we checked for this earlier, we don't nee to save it
+					//the first field returned is Message ID, is always $GPGGA, we checked for this earlier, we don't nee to save it
+					startOfField = strtok(NULL, ",");
+					//this field is UTC time, we don't need this so we can continue strtok calls
 					startOfField = strtok(NULL, ",");//continue strtok calls
 					//This field is latitude info, always in format ddmm.mmmm, copy in the temporary latitude string
 					strcpy(latitude, startOfField);//strtok already replaced the "," with \0 thus I can use strcpy, memcpy would also be possible
@@ -1202,27 +1214,35 @@ static void GPSParsing(){
 					startOfField = strtok(NULL, ",");//continue strtok calls
 					//This field is E/W indicator, due to belgium being E, we don't need this
 					startOfField = strtok(NULL, ",");
-					//This field is UTC time, not needed;
+					//This field is fix valid, we use this to check if the fix is valid
+					strcpy(fixValid, startOfField);
 					startOfField = strtok(NULL, ",");
-					//this field is the datavalid field, we use this so we only update GPS data when valid
-					strcpy(dataValid, startOfField);
+					//this field is the satellites used field, we can store the amount of satellites here
+					strcpy(satUsed, startOfField);
+					startOfField = strtok(NULL, ",");
+					//this field is the HDOP field, we send this to the backend for accuracy measurements
+					strncpy(HDOP, startOfField, 3);//I'm unsure what values HDOP can take, I've never seen high values, yet  just to be sure I assume no more than 3 bytes
 					//Remaining fields are not longer needed, thus we can stop strtokking here.
 
-					//Data is valid we continue
-					if(strcmp(dataValid, "A")==0){
+					//if the fix is valid we continue
+					if(strcmp(fixValid, "1")==0 || strcmp(fixValid, "2")==0 || strcmp(fixValid, "6")==0){
 						//Now we have the GPS data, but the . seperator is in the wrong position
 						//We correct this when copying to GPS data for LoRaWAN
-						//format is dd.mmmmmm|ddd.mmmmmm\0
+						//format is dd;mm;.mmmm|ddd;mm;.mmmm\0
 						// but received format is ddmm.mmmm and dddmm.mmmm
 						strncpy(LoRaWANGPSdata, latitude, 2);
-						strncpy(&LoRaWANGPSdata[2], ".", 1);
-						strncpy(&LoRaWANGPSdata[3], &latitude[2], 2);
-						strcpy(&LoRaWANGPSdata[5], &latitude[5]);
-						strcpy(&LoRaWANGPSdata[strlen(latitude)], "|");
-						strncpy(&LoRaWANGPSdata[strlen(latitude)+1], longitude, 3);
-						strncpy(&LoRaWANGPSdata[strlen(latitude)+1+3], ".", 1);
-						strncpy(&LoRaWANGPSdata[strlen(latitude)+1+3+1], &longitude[3], 2);
-						strcpy(&LoRaWANGPSdata[strlen(latitude)+1+3+1+2], &longitude[6]);
+						strncpy(&LoRaWANGPSdata[2], ";", 1);
+						strncpy(&LoRaWANGPSdata[2+1], &latitude[2], 2);
+						strncpy(&LoRaWANGPSdata[2+1+2], ";", 1);
+						strcpy(&LoRaWANGPSdata[2+1+2+1], &latitude[4]);
+						strcpy(&LoRaWANGPSdata[strlen(latitude)+2], "|");
+						strncpy(&LoRaWANGPSdata[strlen(latitude)+2+1], longitude, 3);
+						strncpy(&LoRaWANGPSdata[strlen(latitude)+2+1+3], ";", 1);
+						strncpy(&LoRaWANGPSdata[strlen(latitude)+2+1+3+1], &longitude[3], 2);
+						strncpy(&LoRaWANGPSdata[strlen(latitude)+2+1+3+1+2], ";", 1);
+						strcpy(&LoRaWANGPSdata[strlen(latitude)+2+1+3+1+2+1], &longitude[5]);
+						strcpy(&LoRaWANGPSdata[strlen(latitude)+strlen(longitude)+2+2+1], "|");
+						strcpy(&LoRaWANGPSdata[strlen(latitude)+strlen(longitude)+2+2+1+1], HDOP);
 					}
 				}
 			}
