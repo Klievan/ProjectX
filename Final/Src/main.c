@@ -70,28 +70,26 @@ static volatile uint8_t TRANSMITTING = 0;
 static int32_t hardIronFault[] = {0, 0, 0};
 
 //Variables used for LoRaWAN
-static volatile LoRaWANState loRaWANState = tx_rx;
-static char AT_return_code[7] = "";//contains the AT_return_code
-//must be reset to all \0 using memset after every use
-static uint8_t loRaWANSendCmdAndData[30] = "";//pointer to string used to build complete AT_send_cmd including data
+
 
 //Variables used for contextswitching
 static volatile OutdoorSensorState outdoorSensorState = disabled;//state for the outdoor sensors.
 //the uart must first wait for the start of command delimiter \n, then it can receive the command
-static uint8_t dash7Cmd [16] = "";//will contain the command sent over D7, xy\r (x = group = 2, y = bit with devices to enable
-static uint8_t D7DMABfr [16] = "";
+static volatile uint8_t dash7Cmd [16] = "";//will contain the command sent over D7, xy\r (x = group = 2, y = bit with devices to enable
+static volatile uint8_t D7DMABfr [16] = "";//these arrays are used for double buffering the D7 data
 // current device mapping is [x x x x x x x GPS] (only gps pretty much)
 
-//Variables used for GPS
-static uint8_t LoRaWANdata[18] = "00,00000|00,00000";//LoRaWAN GPS data, is 8 characters lat, 8 characters lon and pipe seperator
-static volatile uint8_t sendLoRaWANdata = 0;
-static volatile uint8_t loRaWANStateTransition = 0;
+//Variables used for GPS and LoRaWAN
+static volatile LoRaWANState loRaWANState = tx_rx;
+static char AT_return_code[7] = "";//contains the AT_return_code
+//must be reset to all \0 using memset after every use
+static uint8_t loRaWANSendCmdAndData[31] = "";// AT send cmd + LoRaWANGPSdata = 31 bytes (including null terminator)
+static uint8_t LoRaWANGPSdata[21] = "00.000000|000.000000";//LoRaWAN GPS data, is 9 characters lat, 10 characters lon and pipe seperator + \0 = 21, parsed from GPSdata
+static volatile uint8_t sendLoRaWANdata = 0;// set to 1 when a LoRaWAN message may be transmitted
+static volatile uint8_t loRaWANStateTransition = 0;// set to 1 when the LoRaWAN FSM may (possibly) change states
 static volatile uint8_t LoRaWAN10SecCnter = 0;//counter that gets incremented every time the RTX wakes up. This is to make sure a LoRaWAN message is only sent every 60 sec
-static volatile uint8_t GPSmsg[30];
-static volatile uint8_t GPSdata[1];
-static volatile uint8_t GPSoutput[80];
-static volatile uint8_t GPSCnt = 0;
-
+static volatile uint8_t GPSdata[103] = "";// raw GPS data, contains at least 1 whole GPS string
+static volatile uint8_t GPSDMABfr[103] = "";//these registers are used for double buffering the GPS data
 static volatile uint8_t GPSdataArrived = 0;
 static volatile uint8_t LoRaWANdataArrived = 0;
 static volatile uint8_t D7dataArrived = 0;
@@ -979,14 +977,14 @@ static uint8_t transmitLoRaWANData(uint8_t* data){
 		strncpy(&loRaWANSendCmdAndData[10], data, strlen(data));
 		strcpy(&loRaWANSendCmdAndData[strlen(data)+strlen(AT_SEND_cmd)], "\r\n");
 		*/
-		memcpy(loRaWANSendCmdAndData, AT_SEND_cmd, 10);
-		memcpy(&loRaWANSendCmdAndData[10], data, 17);
-		memcpy(&loRaWANSendCmdAndData[28], "\r\n", 2);
+		strcpy(loRaWANSendCmdAndData, AT_SEND_cmd);
+		strcpy(&loRaWANSendCmdAndData[strlen(AT_SEND_cmd)], data);
+		strcpy(&loRaWANSendCmdAndData[strlen(AT_SEND_cmd)+strlen(data)], "\r\n");
 		__HAL_UART_FLUSH_DRREGISTER(&huart5);
 		//HAL_UART_Transmit(&huart2, "starting transmit", strlen("starting transmit"), HAL_MAX_DELAY);
 		//HAL_UART_Receive_IT(&huart5, (uint8_t*)AT_return_code,6);
 		//HAL_UART_Transmit_IT(&huart5, loRaWANSendCmdAndData, strlen(loRaWANSendCmdAndData));
-		HAL_UART_Transmit(&huart5, loRaWANSendCmdAndData, 29, HAL_MAX_DELAY);
+		HAL_UART_Transmit(&huart5, loRaWANSendCmdAndData, strlen(loRaWANSendCmdAndData), HAL_MAX_DELAY);
 		//HAL_UART_Transmit(&huart2, "verifying return code", strlen("verifying return code"), HAL_MAX_DELAY);
 		//if these are equal the network was joined succesfully
 		return 0;
@@ -1034,7 +1032,7 @@ static void outdoorSensorFSM(){
 	#ifndef NSERDEBUG
 						HAL_UART_Transmit(&huart2, "transmitting data\n\r", strlen("transmitting data\n\r"), HAL_MAX_DELAY);
 	#endif
-							loRaWANState = tx_rx;
+						loRaWANState = tx_rx;
 							/*
 							if(transmitLoRaWANData((uint8_t*) LoRaWANdata) == 1)
 								loRaWANState = joined_network;
@@ -1045,7 +1043,7 @@ static void outdoorSensorFSM(){
 						// tx_rx indicates the uart is currently transmitting or waiting for reception
 
 						if(sendLoRaWANdata){
-							transmitLoRaWANData(LoRaWANdata);
+							transmitLoRaWANData(LoRaWANGPSdata);
 							sendLoRaWANdata = 0;
 						}
 
@@ -1066,7 +1064,7 @@ static void outdoorSensorFSM(){
 				  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_SET);
 
 				  /*Configure GPIO pin Output Level high, turn on LoRaWAN module */
-				  //HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET);
+				  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET);
 
 				outdoorSensorState = enabled;
 				break;
@@ -1075,7 +1073,7 @@ static void outdoorSensorFSM(){
 				  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET);
 
 				  /*Configure GPIO pin Output Level high, turn on LoRaWAN module */
-				  //HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);
+				  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);
 
 				  loRaWANState = startup;
 
@@ -1104,10 +1102,12 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle){
 		LoRaWANdataArrived = 1;
 	} else if(UartHandle == &huart4){
 		__HAL_UART_FLUSH_DRREGISTER(&huart4);// flush whatever is in the registers by now, must do to prevent overrun
-		memcpy(dash7Cmd, D7DMABfr, 15);
-		D7dataArrived = 1;
+		memcpy(dash7Cmd, D7DMABfr, 15);// copy content to new buffer
+		D7dataArrived = 1;// mark data as arrived
 	} else if(UartHandle == &huart1){
-		GPSdataArrived = 1;
+		__HAL_UART_FLUSH_DRREGISTER(&huart1);// flush DDR to prevent overrun while we execute the next two commands
+		memcpy(GPSdata, GPSDMABfr, 102);// copy content to new buffer
+		GPSdataArrived = 1;// mark data as arrived
 	} else {
 		//insert code here
 	}
@@ -1137,7 +1137,7 @@ static void uart1DMAConfig(){
 }
 
 static void uart1DMAStart(){
-	HAL_UART_Receive_DMA(&huart1, &GPSdata, 1);
+	HAL_UART_Receive_DMA(&huart1, GPSDMABfr, 102);
 }
 
 static void uart4DMAConfig(){
@@ -1157,81 +1157,66 @@ static void uart4DMAConfig(){
 	HAL_NVIC_EnableIRQ(UART4_IRQn);
 }
 static void uart4DMAStart(){
-	HAL_UART_Receive_DMA(&huart4, &D7DMABfr, 15);
+	HAL_UART_Receive_DMA(&huart4, D7DMABfr, 15);
 }
 
 static void GPSParsing(){
 	if(GPSdataArrived == 1){
 		if(outdoorSensorState == enabled){
+			//Variables to temporary hold latitude and longitude;
+			uint8_t latitude[10] = "";
+			uint8_t longitude[11] = "";
+			uint8_t dataValid[2] = "";
+			//find start of command
+			uint8_t* startOfGPSFrame;
+			startOfGPSFrame = strstr(GPSdata, "$GPGLL");
+			//First verify if sequence is found, the GPS transmits a lot of data on startup so it is possible there is not frame
+			if(startOfGPSFrame != NULL){
+				//next verify if at least an entire frame is captures, again, possible due to startup data that the start is captured, but not the entire frame
+				//after startup these problems should be nonexistend as the buffer can contain 2 full frames, resulting in at least 1 whole frame at all times
+				if(strlen(startOfGPSFrame)>50){
+					//now we need to tokenate this string, not all tokens are needed though, thus some are dropped, and the loop is unrolled to save a few cycles time
+					uint8_t* startOfField;
+					startOfField = strtok(startOfGPSFrame, ",");//the delimiter is ","
+					//the first field returned is Message ID, is always $GPGLL, we checked for this earlier, we don't nee to save it
+					startOfField = strtok(NULL, ",");//continue strtok calls
+					//This field is latitude info, always in format ddmm.mmmm, copy in the temporary latitude string
+					strcpy(latitude, startOfField);//strtok already replaced the "," with \0 thus I can use strcpy, memcpy would also be possible
+					startOfField = strtok(NULL, ",");//continue strtok calls
+					//This field is N/S field, due to Belgium being N, we don't need this
+					startOfField = strtok(NULL, ",");//contiunue strtok calls
+					//This field is longitude info, always in format dddmm.mmmm, copy in the temporary longitude string
+					strcpy(longitude, startOfField);
+					startOfField = strtok(NULL, ",");//continue strtok calls
+					//This field is E/W indicator, due to belgium being E, we don't need this
+					startOfField = strtok(NULL, ",");
+					//This field is UTC time, not needed;
+					startOfField = strtok(NULL, ",");
+					//this field is the datavalid field, we use this so we only update GPS data when valid
+					strcpy(dataValid, startOfField);
+					//Remaining fields are not longer needed, thus we can stop strtokking here.
 
-			  //HAL_UART_Transmit(&huart2, data, 1, HAL_MAX_DELAY);
-			  if((char *) GPSdata[0] == '*'){
-				  char latitude[8];
-				  int cntLat = 0;
-				  char longitude[7];
-				  int cntLong = 0;
-
-				  for(int j = 0; j < GPSCnt; j++){
-					  if(GPSoutput[j] == 'N' || GPSoutput[j] == 'S'){
-						  for(int k = j-10; k <j; k++){
-							  if(GPSoutput[k] == '.'){
-
-							  }else if(cntLat == 2){
-								  latitude[cntLat] = ',';
-								  cntLat++;
-							  }else{
-								  latitude[cntLat] = GPSoutput[k];
-								  cntLat++;
-							  }
-						  }
-					  }else if(GPSoutput[j] == 'E' || GPSoutput[j] == 'W'){
-						  for(int k = j-9; k <j; k++){
-							  if(GPSoutput[k] == '.'){
-
-							  }else if(cntLong == 1){
-								  longitude[cntLong] = ',';
-								  cntLong++;
-							  }else{
-								  longitude[cntLong] = GPSoutput[k];
-								  cntLong++;
-							  }
-						  }
-					  }
-				  }
-				  char lat[5];
-				  sprintf(lat,"lat: ");
-				  char lon[5];
-				  sprintf(lon,"lon: ");
-				  char sep[1];
-				  sprintf(sep,"|");
-				  char end[2];
-				  sprintf(end,"\r\n");
-
-				  if (strncmp(latitude, "49,00000", 8) > 0 && strncmp(latitude, "52,00000", 8) < 0){
-					  	  	  	  strncpy(LoRaWANdata, latitude,  8);
-					  	  	  	  strncpy(&LoRaWANdata[8], "|", 1);
-					  	  	  	  strncpy(&LoRaWANdata[9], longitude, 8);
-					  	  	  	  strncpy(&LoRaWANdata[17], "", 1);//just to make sure the null terminator is present
-#ifndef NSERDEBUG
-					  	  	  	  /*
-				  				  HAL_UART_Transmit(&huart2, lat, 5, HAL_MAX_DELAY);
-				  				  HAL_UART_Transmit(&huart2, latitude, 8, HAL_MAX_DELAY);
-				  				  HAL_UART_Transmit(&huart2, sep, 1, HAL_MAX_DELAY);
-				  				  HAL_UART_Transmit(&huart2, lon, 5, HAL_MAX_DELAY);
-				  				  HAL_UART_Transmit(&huart2, longitude, 7, HAL_MAX_DELAY);
-				  				  HAL_UART_Transmit(&huart2, end, 2, HAL_MAX_DELAY);
-				  				  */
-#endif
-				  				  //so basically only send when latitude is correct around the latitude of belgium
-				  			  }
-				  GPSCnt = 0;
-			  }else{
-				  GPSoutput[GPSCnt] = (char *) GPSdata[0];
-				  GPSCnt++;
-			  }
-
-		  }
-		GPSdataArrived = 0;
+					//Data is valid we continue
+					if(strcmp(dataValid, "A")==0){
+						//Now we have the GPS data, but the . seperator is in the wrong position
+						//We correct this when copying to GPS data for LoRaWAN
+						//format is dd.mmmmmm|ddd.mmmmmm\0
+						// but received format is ddmm.mmmm and dddmm.mmmm
+						strncpy(LoRaWANGPSdata, latitude, 2);
+						strncpy(&LoRaWANGPSdata[2], ".", 1);
+						strncpy(&LoRaWANGPSdata[3], &latitude[2], 2);
+						strcpy(&LoRaWANGPSdata[5], &latitude[5]);
+						strcpy(&LoRaWANGPSdata[strlen(latitude)], "|");
+						strncpy(&LoRaWANGPSdata[strlen(latitude)+1], longitude, 3);
+						strncpy(&LoRaWANGPSdata[strlen(latitude)+1+3], ".", 1);
+						strncpy(&LoRaWANGPSdata[strlen(latitude)+1+3+1], &longitude[3], 2);
+						strcpy(&LoRaWANGPSdata[strlen(latitude)+1+3+1+2], &longitude[6]);
+					}
+				}
+			}
+		}
+		memset(GPSdata, 0, sizeof(GPSdata)/sizeof(uint8_t));//reset the double buffer to all 0
+		GPSdataArrived = 0;//reset the data arrived flag
 	}
 }
 
