@@ -86,7 +86,6 @@ static char AT_return_code[7] = "";//contains the AT_return_code
 //must be reset to all \0 using memset after every use
 static uint8_t loRaWANSendCmdAndData[39] = "";// AT send cmd + LoRaWANGPSdata = 31 bytes (including null terminator)
 static uint8_t LoRaWANGPSdata[29] = "00;00;.0000|000;00;.0000|0.0";//LoRaWAN GPS data, is 9 characters lat, 10 characters lon and pipe seperator + \0 = 21, parsed from GPSdata
-static volatile uint8_t sendLoRaWANdata = 0;// set to 1 when a LoRaWAN message may be transmitted
 static volatile uint8_t loRaWANStateTransition = 0;// set to 1 when the LoRaWAN FSM may (possibly) change states
 static volatile uint8_t LoRaWAN10SecCnter = 0;//counter that gets incremented every time the RTX wakes up. This is to make sure a LoRaWAN message is only sent every 60 sec
 static volatile uint8_t GPSdata[153] = "";// raw GPS data, contains at least 1 whole GPS string
@@ -94,6 +93,8 @@ static volatile uint8_t GPSDMABfr[153] = "";//these registers are used for doubl
 static volatile uint8_t GPSdataArrived = 0;
 static volatile uint8_t LoRaWANdataArrived = 0;
 static volatile uint8_t D7dataArrived = 0;
+static volatile uint8_t enableGPS = 0;
+static volatile uint8_t newLoRaWANData = 0;
 
 /* USER CODE END PV */
 
@@ -136,6 +137,7 @@ static void uart4DMAStart();
 static void GPSParsing();//parses GPS data
 static void LoRaWANParsing();
 static void D7Parsing();
+static void GPSState();//turns on gps when Enable GPS is true
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -242,6 +244,7 @@ int main(void)
 	  HAL_UART_Transmit(&huart2, "looping...\r\n", strlen("looping...\r\n"), HAL_MAX_DELAY);
 #endif
 	  GPSParsing();
+	  GPSState();
 	  LoRaWANParsing();
 	  D7Parsing();
 	  outdoorSensorFSM();
@@ -1012,11 +1015,9 @@ static void enterSleepMode(uint32_t regulator) {
 
 void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc) {
 	if(!TRANSMITTING) TRANSMITTING = 1;
-	//++LoRaWAN10SecCnter;
-	//if (LoRaWAN10SecCnter > 5 )
-	if(!sendLoRaWANdata) sendLoRaWANdata = 1;
+	++LoRaWAN10SecCnter;
+	enableGPS = LoRaWAN10SecCnter%6 == 0 ? 1 : enableGPS;
 	if(!loRaWANStateTransition) loRaWANStateTransition = 1;
-	//LoRaWAN10SecCnter %= 6;//remainder after division by 6 means the counter gets reset at 6
 }
 
 static uint8_t joinLoRaWANnetwork(){
@@ -1121,9 +1122,9 @@ static void outdoorSensorFSM(){
 					case tx_rx:
 						// tx_rx indicates the uart is currently transmitting or waiting for reception
 
-						if(sendLoRaWANdata){
+						if(newLoRaWANData){
 							transmitLoRaWANData(LoRaWANGPSdata);
-							sendLoRaWANdata = 0;
+							newLoRaWANData = 0;
 						}
 
 						// only tries to send a message every 60 seconds, otherwise the LoRaWAN modem has to buffer too much data
@@ -1310,6 +1311,11 @@ static void GPSParsing(){
 						strcpy(&LoRaWANGPSdata[strlen(latitude)+2+1+3+1+2+1], &longitude[5]);
 						strcpy(&LoRaWANGPSdata[strlen(latitude)+strlen(longitude)+2+2+1], "|");
 						strcpy(&LoRaWANGPSdata[strlen(latitude)+strlen(longitude)+2+2+1+1], HDOP);
+
+						//now update that we have new data, and disable GPS module
+						newLoRaWANData = 1;
+						enableGPS = 0;
+						GPSState();
 					}
 				}
 			}
@@ -1386,6 +1392,14 @@ static void D7Parsing(){
 				//HAL_UART_Receive_IT(&huart4, dash7Cmd, 15);//Start receive cycle again
 				D7dataArrived = 0;
 	}
+}
+
+static void GPSState(){
+	if(enableGPS){
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_SET);
+	}
+	else
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET);
 }
 
 /* USER CODE END 4 */
