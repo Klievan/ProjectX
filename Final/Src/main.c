@@ -76,8 +76,8 @@ static int32_t hardIronFault[] = {0, 0, 0}; /**< Test */
 //Variables used for contextswitching
 static volatile OutdoorSensorState outdoorSensorState = disabled;//state for the outdoor sensors.
 //the uart must first wait for the start of command delimiter \n, then it can receive the command
-static volatile uint8_t dash7Cmd [16] = "";//will contain the command sent over D7, xy\r (x = group = 2, y = bit with devices to enable
-static volatile uint8_t D7DMABfr [16] = "";//these arrays are used for double buffering the D7 data
+static volatile uint8_t dash7Cmd [101] = "";//will contain the command sent over D7, xy\r (x = group = 2, y = bit with devices to enable
+static volatile uint8_t D7DMABfr [101] = "";//these arrays are used for double buffering the D7 data
 // current device mapping is [x x x x x x x GPS] (only gps pretty much)
 
 //Variables used for GPS and LoRaWAN
@@ -1188,7 +1188,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle){
 		LoRaWANdataArrived = 1;
 	} else if(UartHandle == &huart4){
 		__HAL_UART_FLUSH_DRREGISTER(&huart4);// flush whatever is in the registers by now, must do to prevent overrun
-		memcpy(dash7Cmd, D7DMABfr, 15);// copy content to new buffer
+		memcpy(dash7Cmd, D7DMABfr, 100);// copy content to new buffer
 		D7dataArrived = 1;// mark data as arrived
 	} else if(UartHandle == &huart1){
 		__HAL_UART_FLUSH_DRREGISTER(&huart1);// flush DDR to prevent overrun while we execute the next two commands
@@ -1243,7 +1243,7 @@ static void uart4DMAConfig(){
 	HAL_NVIC_EnableIRQ(UART4_IRQn);
 }
 static void uart4DMAStart(){
-	HAL_UART_Receive_DMA(&huart4, D7DMABfr, 15);
+	HAL_UART_Receive_DMA(&huart4, D7DMABfr, 100);
 }
 
 static void GPSParsing(){
@@ -1375,6 +1375,12 @@ static void LoRaWANParsing(){
 }
 static void D7Parsing(){
 	if(D7dataArrived == 1){
+			//insert loop that replaces every occurence of \0 with 0x61 (small a)
+			//trailing \0 is kept by only checking the first 100 chars, and not the last one
+			for(int i = 0; i<100; i++){
+				if (dash7Cmd[i]==0x00)
+					dash7Cmd[i]=0x61;
+			}
 				if (strstr(dash7Cmd, "\x0A\x32\x81\x0D") != NULL){
 					// /n 2 0b0000 0001 /r
 					if(outdoorSensorState != enabled)
