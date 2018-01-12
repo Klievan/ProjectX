@@ -84,8 +84,8 @@ static volatile uint8_t D7DMABfr [16] = "";//these arrays are used for double bu
 static volatile LoRaWANState loRaWANState = startup;
 static char AT_return_code[7] = "";//contains the AT_return_code
 //must be reset to all \0 using memset after every use
-static uint8_t loRaWANSendCmdAndData[39] = "";// AT send cmd + LoRaWANGPSdata = 31 bytes (including null terminator)
-static uint8_t LoRaWANGPSdata[29] = "00;00;.0000|000;00;.0000|0.0";//LoRaWAN GPS data, is 9 characters lat, 10 characters lon and pipe seperator + \0 = 21, parsed from GPSdata
+static uint8_t loRaWANSendCmdAndData[37] = "";// AT send cmd + LoRaWANGPSdata = 31 bytes (including null terminator)
+static uint8_t LoRaWANGPSdata[27] = "00;00.0000|000;00.0000|0.0";//LoRaWAN GPS data, is 9 characters lat, 10 characters lon and pipe seperator + \0 = 21, parsed from GPSdata
 static volatile uint8_t loRaWANStateTransition = 0;// set to 1 when the LoRaWAN FSM may (possibly) change states
 static volatile uint8_t LoRaWAN10SecCnter = 0;//counter that gets incremented every time the RTX wakes up. This is to make sure a LoRaWAN message is only sent every 60 sec
 static volatile uint8_t GPSdata[153] = "";// raw GPS data, contains at least 1 whole GPS string
@@ -1144,7 +1144,9 @@ static void outdoorSensorFSM(){
 				  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_SET);
 
 				  /*Configure GPIO pin Output Level high, turn on LoRaWAN module */
-				  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET);
+				  //HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET);
+				  enableGPS = 1;
+				  GPSState();
 
 				outdoorSensorState = enabled;
 				break;
@@ -1153,7 +1155,9 @@ static void outdoorSensorFSM(){
 				  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET);
 
 				  /*Configure GPIO pin Output Level high, turn on LoRaWAN module */
-				  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);
+				  //HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);
+				  enableGPS = 0;
+				  GPSState();
 
 				  loRaWANState = startup;
 
@@ -1301,14 +1305,12 @@ static void GPSParsing(){
 						strncpy(LoRaWANGPSdata, latitude, 2);
 						strncpy(&LoRaWANGPSdata[2], ";", 1);
 						strncpy(&LoRaWANGPSdata[2+1], &latitude[2], 2);
-						strncpy(&LoRaWANGPSdata[2+1+2], ";", 1);
-						strcpy(&LoRaWANGPSdata[2+1+2+1], &latitude[4]);
+						strcpy(&LoRaWANGPSdata[2+1+2], &latitude[4]);
 						strcpy(&LoRaWANGPSdata[strlen(latitude)+2], "|");
 						strncpy(&LoRaWANGPSdata[strlen(latitude)+2+1], longitude, 3);
 						strncpy(&LoRaWANGPSdata[strlen(latitude)+2+1+3], ";", 1);
 						strncpy(&LoRaWANGPSdata[strlen(latitude)+2+1+3+1], &longitude[3], 2);
-						strncpy(&LoRaWANGPSdata[strlen(latitude)+2+1+3+1+2], ";", 1);
-						strcpy(&LoRaWANGPSdata[strlen(latitude)+2+1+3+1+2+1], &longitude[5]);
+						strcpy(&LoRaWANGPSdata[strlen(latitude)+2+1+3+1+2], &longitude[5]);
 						strcpy(&LoRaWANGPSdata[strlen(latitude)+strlen(longitude)+2+2+1], "|");
 						strcpy(&LoRaWANGPSdata[strlen(latitude)+strlen(longitude)+2+2+1+1], HDOP);
 
