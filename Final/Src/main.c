@@ -1304,15 +1304,13 @@ static void GPSParsing(){
 						// but received format is ddmm.mmmm and dddmm.mmmm
 						strncpy(LoRaWANGPSdata, latitude, 2);
 						strncpy(&LoRaWANGPSdata[2], ";", 1);
-						strncpy(&LoRaWANGPSdata[2+1], &latitude[2], 2);
-						strcpy(&LoRaWANGPSdata[2+1+2], &latitude[4]);
-						strcpy(&LoRaWANGPSdata[strlen(latitude)+2], "|");
-						strncpy(&LoRaWANGPSdata[strlen(latitude)+2+1], longitude, 3);
-						strncpy(&LoRaWANGPSdata[strlen(latitude)+2+1+3], ";", 1);
-						strncpy(&LoRaWANGPSdata[strlen(latitude)+2+1+3+1], &longitude[3], 2);
-						strcpy(&LoRaWANGPSdata[strlen(latitude)+2+1+3+1+2], &longitude[5]);
-						strcpy(&LoRaWANGPSdata[strlen(latitude)+strlen(longitude)+2+2+1], "|");
-						strcpy(&LoRaWANGPSdata[strlen(latitude)+strlen(longitude)+2+2+1+1], HDOP);
+						strcpy(&LoRaWANGPSdata[2+1], &latitude[2]);
+						strcpy(&LoRaWANGPSdata[strlen(latitude)+1], "|");
+						strncpy(&LoRaWANGPSdata[strlen(latitude)+1+1], longitude, 3);
+						strncpy(&LoRaWANGPSdata[strlen(latitude)+1+1+3], ";", 1);
+						strcpy(&LoRaWANGPSdata[strlen(latitude)+1+1+3+1], &longitude[3]);
+						strcpy(&LoRaWANGPSdata[strlen(latitude)+strlen(longitude)+1+1+1], "|");
+						strcpy(&LoRaWANGPSdata[strlen(latitude)+strlen(longitude)+1+1+1+1], HDOP);
 
 						//now update that we have new data, and disable GPS module
 						newLoRaWANData = 1;
