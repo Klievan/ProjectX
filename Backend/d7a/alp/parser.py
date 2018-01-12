@@ -6,26 +6,18 @@ import struct
 
 from d7a.alp.command              import Command
 from d7a.alp.forward_action import ForwardAction
-from d7a.alp.indirect_forward_action import IndirectForwardAction
 from d7a.alp.interface import InterfaceType
-from d7a.alp.operands.file_header import FileHeaderOperand
-from d7a.alp.operands.indirect_interface_operand import IndirectInterfaceOperand
 from d7a.alp.operands.interface_configuration import InterfaceConfiguration
 from d7a.alp.operands.interface_status import InterfaceStatusOperand
-from d7a.alp.operands.length import Length
-from d7a.alp.operands.query import QueryOperand
-from d7a.alp.operations.break_query import BreakQuery
 from d7a.alp.operations.forward import Forward
-from d7a.alp.operations.indirect_forward import IndirectForward
 from d7a.alp.operations.status import InterfaceStatus
 from d7a.alp.operations.tag_response import TagResponse
 from d7a.alp.operations.write_operations import WriteFileData
 from d7a.alp.status_action import StatusAction, StatusActionOperandExtensions
 from d7a.alp.regular_action import RegularAction
-from d7a.alp.operations.responses import ReturnFileData, ReturnFileHeader
+from d7a.alp.operations.responses import ReturnFileData
 from d7a.alp.operations.requests  import ReadFileData
-from d7a.alp.operands.file        import Data, DataRequest
-from d7a.alp.operands.offset import Offset
+from d7a.alp.operands.file        import Offset, Data, DataRequest
 from d7a.alp.tag_response_action import TagResponseAction
 from d7a.parse_error              import ParseError
 from d7a.sp.configuration import Configuration
@@ -62,13 +54,10 @@ class Parser(object):
       return{
         1  :  self.parse_alp_read_file_data_action,
         4  :  self.parse_alp_write_file_data_action,
-        9  :  self.parse_break_query_action,
         32 :  self.parse_alp_return_file_data_action,
-        33 :  self.parse_alp_return_file_header_action,
         34 :  self.parse_alp_return_status_action,
         35 :  self.parse_tag_response_action,
         50 :  self.parse_forward_action,
-        51 :  self.parse_indirect_forward_action,
         52 :  self.parse_tag_request_action
       }[op](b7, b6, s)
     except KeyError:
@@ -88,11 +77,8 @@ class Parser(object):
 
   def parse_alp_file_data_request_operand(self, s):
     offset = self.parse_offset(s)
-    length = Length.parse(s)
+    length = s.read("uint:8")
     return DataRequest(length=length, offset=offset)
-
-  def parse_break_query_action(self, b7, b6, s):
-    return RegularAction(group=b7, resp=b6, operation=BreakQuery(operand=QueryOperand.parse(s)))
 
   def parse_alp_return_file_data_action(self, b7, b6, s):
     operand = self.parse_alp_return_file_data_operand(s)
@@ -100,16 +86,10 @@ class Parser(object):
                         resp=b6,
                         operation=ReturnFileData(operand=operand))
 
-  def parse_alp_return_file_header_action(self, b7, b6, s):
-    operand = FileHeaderOperand.parse(s)
-    return RegularAction(group=b7,
-                        resp=b6,
-                        operation=ReturnFileHeader(operand=operand))
-
   def parse_alp_return_file_data_operand(self, s):
     offset = self.parse_offset(s)
-    length = Length.parse(s)
-    data   = s.read("bytes:" + str(length.value))
+    length = s.read("uint:8") # TODO assuming 1 bute for now but can be 4 bytes
+    data   = s.read("bytes:" + str(length))
     return Data(offset=offset, data=map(ord,data))
 
   def parse_alp_return_status_action(self, b7, b6, s):
@@ -141,17 +121,6 @@ class Parser(object):
     tag_id = s.read("uint:8")
     return TagResponseAction(eop=b7, error=b6, operation=TagResponse(operand=TagId(tag_id=tag_id)))
 
-  def parse_indirect_forward_action(self, b7, b6, s):
-    interface_file_id = int(s.read("uint:8"))
-    overload = b7
-    overload_config = None
-    if overload:
-      # TODO we are assuming D7ASP interface here
-      overload_config = Addressee.parse(s)
-
-    return IndirectForwardAction(overload=overload, resp=b6, operation=IndirectForward(
-      operand=IndirectInterfaceOperand(interface_file_id=interface_file_id, interface_configuration_overload=overload_config)))
-
   def parse_forward_action(self, b7, b6, s):
     if b7:
       raise ParseError("bit 7 is RFU")
@@ -173,4 +142,8 @@ class Parser(object):
     )
 
   def parse_offset(self, s):
-    return Offset.parse(s)
+    id     = s.read("uint:8")
+    size   = s.read("uint:2") # + 1 = already read
+
+    offset = s.read("uint:" + str(6+(size * 8)))
+    return Offset(id=id, size=size+1, offset=offset)

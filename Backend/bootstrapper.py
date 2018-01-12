@@ -36,6 +36,7 @@ def debug(message):
 
 
 def execute_rpc_command(device_id, json_alp_cmd):
+    #cmd = {"method": "execute-alp-async", "params": jsonpickle.encode(json_alp_cmd), "timeout": 500}
     cmd = {"method": "execute-alp-async", "params": jsonpickle.encode(json_alp_cmd), "timeout": 500}
     path_params = {'deviceId': device_id}
     query_params = {}
@@ -56,15 +57,25 @@ def execute_rpc_command(device_id, json_alp_cmd):
 
 
 def set_gps(GPS):
-    characters = [0x00, 0x01]  # 0 = GPS off -> 0x30, 1 = GPS on -> 0x31
+    characters = [0x80, 0x81]  # 0 = GPS off -> 0x30, 1 = GPS on -> 0x31
     cmd = Command.create_with_return_file_data_action(0x40, [0x0A, 0x32, characters[GPS], 0X0D], InterfaceType.D7ASP,
                                                       D7Config(
                                                           addressee=Addressee(access_class=0x11, id_type=IdType.NOID)))
-    execute_rpc_command("c2c4ebd0-b95a-11e7-bebc-85e6dd10a2e8", cmd)
+
+    execute_rpc_command("43e01b20-b967-11e7-bebc-85e6dd10a2e8", cmd)
     debug("GPS was set to " + str(GPS) + " through RPC")
     push_to_tb({"gps": GPS})
-    for i in range(0, 5):
-        execute_rpc_command("c2c4ebd0-b95a-11e7-bebc-85e6dd10a2e8", cmd)
+    for i in range(0, 20):
+        cmd = Command.create_with_return_file_data_action(0x40, [0x0A, 0x32, characters[GPS], 0X0D],
+                                                          InterfaceType.D7ASP,
+                                                          D7Config(
+                                                              addressee=Addressee(access_class=0x11,
+                                                                                  id_type=IdType.NOID)))
+        execute_rpc_command("43e01b20-b967-11e7-bebc-85e6dd10a2e8", cmd)
+        execute_rpc_command("f1f7e740-b8b0-11e7-bebc-85e6dd10a2e8", cmd)
+        execute_rpc_command("b6b48ad0-b95a-11e7-bebc-85e6dd10a2e8", cmd)
+        execute_rpc_command("427ab180-f79e-11e7-8c87-85e6dd10a2e8", cmd)
+        time.sleep(0.5)
 
 
 def enable_gps():
@@ -90,11 +101,12 @@ def init_api():
 def on_message(client, userdata, msg):
     # Only process messages from our own node
     msg_payload = str(msg.payload);
-    debug("Received MQTT message from " + json.loads(msg_payload)["node"] + " on topic " + msg.topic)
-    if json.loads(msg_payload)["node"] == node_id:
-        if msg.topic == "/localisation":
+    if msg.topic == "/localisation/DASH7":
+        if json.loads(msg_payload)["node"] == node_id:
             handle_incoming_dash7(msg)
-        elif msg.topic == "/loriot":
+    elif msg.topic == "/loriot/":
+        debug("Incoming loriot")
+        if json.loads(msg_payload)["EUI"] == "BE7A000000001B95":
             handle_incoming_lora(msg)
 
 
@@ -112,8 +124,15 @@ def handle_incoming_dash7(message):
 
 #   Handle incoming LoraWAN message, read in GPS data and push to ThingsBoard. If we're in a safe location, disable GPS
 def handle_incoming_lora(message):
-    locationdata = str(message.payload).split(";")
-    data = {'lat': [locationdata[0]], 'long': locationdata[1]}
+    debug("Handling LoRa")
+    jsondata = json.loads(str(message.payload))["data"].decode('hex')
+    locationdata = str(jsondata).split("|")
+    latdegreesminutes = locationdata[0].split(";")#dd;mm;.mmmm dd
+    lat = float(latdegreesminutes[0])+float(float(latdegreesminutes[1])/60)
+    longdegreesminutes = locationdata[1].split(";")  # dd;mm;.mmmm dd
+    long = float(longdegreesminutes[0]) + float(float(longdegreesminutes[1]) / 60)
+    hdop = float(locationdata[2]);
+    data = {'lat': lat, 'long': long, 'accuracy': hdop}
     push_to_tb(data)
     if is_safe:
         disable_gps()
@@ -149,6 +168,7 @@ def init_mqtt():
     client.subscribe("/localisation/#")
     client.subscribe("/loriot/#")
     client.on_message = on_message
+    client.loop_forever()
     debug("MQTT has been initialized")
 
 
@@ -160,10 +180,17 @@ def start_dash7_localisation():
     global gateways
     fingerprint_gateway_indiches = {"AP1": 0, "AP2": 1, "AP3": 2, "AP4": 3}
     gateways = {"f1f7e740-b8b0-11e7-bebc-85e6dd10a2e8": "AP1", "43e01b20-b967-11e7-bebc-85e6dd10a2e8": "AP2",
-                "b6b48ad0-b95a-11e7-bebc-85e6dd10a2e8": "AP3", "c2c4ebd0-b95a-11e7-bebc-85e6dd10a2e8": "AP4"}
+                "b6b48ad0-b95a-11e7-bebc-85e6dd10a2e8": "AP3", "427ab180-f79e-11e7-8c87-85e6dd10a2e8": "AP4"}
     amount_of_locations = 93
     k = 3
     readings_by_location = [[] for i in range(amount_of_locations)]
+    training_database = json.load(open("data.json"))
+    for j in range(0, amount_of_locations):
+        for i in range(0, len(training_database)):
+            if j == training_database[i]["location"]:
+                readings_by_location[j].append([training_database[i]["gateway0"], training_database[i]["gateway1"],
+                                                training_database[i]["gateway2"], training_database[i]["gateway3"]])
+
     current_reading = [0] * 4;  # [link_budget_A, link_budget_B, link_budget_C, link_budget_D]
 
     #   Checks if our array is fully filled with RSSI data
@@ -197,7 +224,7 @@ def start_dash7_localisation():
 
     #   Infinite loop
     while 1:
-        timeout = time.time() + 5
+        timeout = time.time() + 15
         current_reading = [0] * 4
         while time.time() < timeout:
             if isFull(current_reading):
@@ -228,13 +255,10 @@ def start_dash7_localisation():
 TB_device = "Zw3jC2MF6Tl9uFtqwptY"
 is_safe = 1;
 # Node ID whom we can trust MQTT-messages from
-node_id = "43373134003e0041"
-dangerous_locations = [1, 2, 3, 4];
-# threading.Thread(name='dash7Localisation', target=startDash7Localisation).start()
+node_id = "4337313400340031"
+dangerous_locations = [0,1,2,3,4,5,6,7, 73, 74, 75, 76 ,77, 78 ,79 , 80, 81, 82, 83, 84, 85, 86 ,87 ,88, 89, 90, 91, 92, 93];
 api_client = init_api()
+
+threading.Thread(name='dash7Localisation', target=start_dash7_localisation).start()
 init_mqtt()
-# setGPS(1);
-data = {'lat': '55', 'long': '58'};
-# pushToThingsBoard(data);
-set_gps(1);
 time.sleep(1)

@@ -28,7 +28,7 @@ class TestParser(unittest.TestCase):
 
     (cmds, info) = self.parser.parse(frame)
     self.assertEqual(cmds[0].actions[0].operation.op, 32)
-    self.assertEqual(cmds[0].actions[0].operation.operand.length.value, 4)
+    self.assertEqual(cmds[0].actions[0].operation.operand.length, 4)
 
   def test_bad_identifier(self):
     (cmds, info) = self.parser.parse([
@@ -54,7 +54,7 @@ class TestParser(unittest.TestCase):
     self.parser.buffer = [ 0x10, 0x20, 0x30, 0x10, 0x20, 0x30 ]
     skipped = self.parser.skip_bad_buffer_content()
     self.assertEquals(skipped, 6)
-    self.assertEquals(self.parser.buffer, bytearray())
+    self.assertEquals(self.parser.buffer, [])
 
   def test_empty_buffer_skipping(self):
     self.parser.buffer = []
@@ -66,7 +66,7 @@ class TestParser(unittest.TestCase):
     self.parser.buffer = [ 0xc0, 0x10, 0x20, 0x30 ]
     skipped = self.parser.skip_bad_buffer_content()
     self.assertEquals(skipped, 4)
-    self.assertEquals(self.parser.buffer, bytearray())
+    self.assertEquals(self.parser.buffer, [])
 
   def test_buffer_skipping_with_first_and_second_item_the_id(self):
     self.parser.buffer = bytearray([ 0xc0, 0xc0, 0x10, 0x20, 0x30 ])
@@ -148,12 +148,13 @@ class TestParser(unittest.TestCase):
     # first frame should parse
     (cmds, info) = self.parser.parse(frame)
     self.assertEqual(cmds[0].actions[0].operation.op, 32)
-    self.assertEqual(cmds[0].actions[0].operation.operand.length.value, 4)
+    self.assertEqual(cmds[0].actions[0].operation.operand.length, 4)
+    print info
 
     # and now complete the second frame and check this is parsed as well
     (cmds, info) = self.parser.parse(alp_cmd_bytes) # the missing bytes only, without the frame header
     self.assertEqual(cmds[0].actions[0].operation.op, 32)
-    self.assertEqual(cmds[0].actions[0].operation.operand.length.value, 4)
+    self.assertEqual(cmds[0].actions[0].operation.operand.length, 4)
 
 
 if __name__ == '__main__':

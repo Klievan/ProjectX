@@ -61,7 +61,7 @@ class GatewayCommandExample:
     cmd = Command.create_with_return_file_data_action(0x40, [0x40], InterfaceType.D7ASP, D7Config(addressee=Addressee(access_class=0x11, id_type=IdType.NOID)))
     while 1:
         try:
-            self.execute_rpc_command("c2c4ebd0-b95a-11e7-bebc-85e6dd10a2e8", cmd)
+            self.execute_rpc_command("427ab180-f79e-11e7-8c87-85e6dd10a2e8", cmd)
             print("Online");
         except:
             print("Offline");

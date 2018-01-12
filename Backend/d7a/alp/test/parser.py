@@ -6,14 +6,9 @@
 import unittest
 
 from bitstring import ConstBitStream
-
-from d7a.alp.operands.file_header import FileHeaderOperand
-from d7a.alp.operands.indirect_interface_operand import IndirectInterfaceOperand
 from d7a.alp.operands.interface_status import InterfaceStatusOperand
-from d7a.alp.operands.query import QueryOperand
 
 from d7a.alp.parser import Parser
-from d7a.d7anp.addressee import Addressee, IdType
 from d7a.parse_error import ParseError
 from d7a.phy.channel_header import ChannelBand, ChannelCoding, ChannelClass
 
@@ -48,7 +43,7 @@ class TestParser(unittest.TestCase):
     cmd = Parser().parse(ConstBitStream(bytes=cmd_data), len(cmd_data))
     self.assertEqual(len(cmd.actions), 1)
     self.assertEqual(cmd.actions[0].operation.op, 32)
-    self.assertEqual(cmd.actions[0].operation.operand.length.value, 4)
+    self.assertEqual(cmd.actions[0].operation.operand.length, 4)
 
   def test_basic_valid_message_actions_swapped(self):
     cmd_data = self.interface_status_action + [
@@ -60,7 +55,7 @@ class TestParser(unittest.TestCase):
     ]
     cmd = Parser().parse(ConstBitStream(bytes=cmd_data), len(cmd_data))
     self.assertEqual(cmd.actions[0].operation.op, 32)
-    self.assertEqual(cmd.actions[0].operation.operand.length.value, 4)
+    self.assertEqual(cmd.actions[0].operation.operand.length, 4)
 
   def test_command_without_interface_status(self):
     cmd_data = [
@@ -100,7 +95,7 @@ class TestParser(unittest.TestCase):
 
   def test_unsupported_action(self):
     alp_action_bytes = [
-      0x25,
+      0x21,
       0x40,
       0x00,
       0x00
@@ -120,9 +115,9 @@ class TestParser(unittest.TestCase):
     cmd_bytes = alp_action_bytes + alp_action_bytes + self.interface_status_action
     cmd = Parser().parse(ConstBitStream(bytes=cmd_bytes), len(cmd_bytes))
     self.assertEqual(cmd.actions[0].operation.op, 32)
-    self.assertEqual(cmd.actions[0].operation.operand.length.value, 4)
+    self.assertEqual(cmd.actions[0].operation.operand.length, 4)
     self.assertEqual(cmd.actions[1].operation.op, 32)
-    self.assertEqual(cmd.actions[1].operation.operand.length.value, 4)
+    self.assertEqual(cmd.actions[1].operation.operand.length, 4)
 
   def test_multiple_non_grouped_actions_in_command(self):
     alp_action_bytes = [
@@ -138,9 +133,9 @@ class TestParser(unittest.TestCase):
 
     self.assertEqual(len(cmd.actions), 2)
     self.assertEqual(cmd.actions[0].operation.op, 32)
-    self.assertEqual(cmd.actions[0].operation.operand.length.value, 4)
+    self.assertEqual(cmd.actions[0].operation.operand.length, 4)
     self.assertEqual(cmd.actions[1].operation.op, 32)
-    self.assertEqual(cmd.actions[1].operation.operand.length.value, 4)
+    self.assertEqual(cmd.actions[1].operation.operand.length, 4)
 
   # TODO not implemented yet
   # def test_multiple_grouped_actions_in_command(self):
@@ -274,56 +269,6 @@ class TestParser(unittest.TestCase):
 
     with self.assertRaises(ParseError):
       cmd = Parser().parse(ConstBitStream(bytes=cmd_data), len(cmd_data))
-
-  def test_return_file_header(self):
-    cmd_data = [ 0x21, 0x02, 0x00, 0x03, 0x00, 0x00, 0x0F, 0x00, 0x00,  0x00, 0x0F, 0x00, 0x00,  0x00 ]
-    cmd = Parser().parse(ConstBitStream(bytes=cmd_data), len(cmd_data))
-    self.assertEqual(len(cmd.actions), 1)
-    self.assertEqual(type(cmd.actions[0].operand), FileHeaderOperand)
-    self.assertEqual(cmd.actions[0].operand.file_id, 2)
-    self.assertEqual(cmd.actions[0].operand.file_header.properties.act_enabled, False)
-
-  def test_indirect_fwd(self):
-    cmd_data = [
-      51, # indirect fwd, no overload
-      64  # interface file id
-    ]
-
-    cmd = Parser().parse(ConstBitStream(bytes=cmd_data), len(cmd_data))
-    self.assertEqual(len(cmd.actions), 1)
-    self.assertEqual(type(cmd.actions[0].operand), IndirectInterfaceOperand)
-    self.assertEqual(cmd.actions[0].overload, False)
-    self.assertEqual(cmd.actions[0].operand.interface_file_id, 64)
-    self.assertEqual(cmd.actions[0].operand.interface_configuration_overload, None)
-
-  def test_indirect_fwd_with_overload(self):
-    cmd_data = [
-      (1 << 7) + 51, # indirect fwd, no overload
-      64, # interface file id
-      1 << 4,  # addressee ctrl (NOID, nls_method=NONE)
-      0  # access class
-    ]
-
-    cmd = Parser().parse(ConstBitStream(bytes=cmd_data), len(cmd_data))
-    self.assertEqual(len(cmd.actions), 1)
-    self.assertEqual(type(cmd.actions[0].operand), IndirectInterfaceOperand)
-    self.assertEqual(cmd.actions[0].overload, True)
-    self.assertEqual(cmd.actions[0].operand.interface_file_id, 64)
-    self.assertEqual(type(cmd.actions[0].operand.interface_configuration_overload), Addressee)
-    self.assertEqual(cmd.actions[0].operand.interface_configuration_overload.id_type, IdType.NOID)
-
-  def test_break_query(self):
-    cmd_data = [
-      9, # break query
-      0x44,  # arith comp with value, no mask, unsigned, >
-      0x01,  # compare length
-      25,  # compare value
-      0x20, 0x01  # file offset
-    ]
-
-    cmd = Parser().parse(ConstBitStream(bytes=cmd_data), len(cmd_data))
-    self.assertEqual(len(cmd.actions), 1)
-    self.assertEqual(type(cmd.actions[0].operand), QueryOperand)
 
 if __name__ == '__main__':
   suite = unittest.TestLoader().loadTestsFromTestCase(TestParser)
