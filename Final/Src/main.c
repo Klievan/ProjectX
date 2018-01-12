@@ -1016,7 +1016,8 @@ static void enterSleepMode(uint32_t regulator) {
 void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc) {
 	if(!TRANSMITTING) TRANSMITTING = 1;
 	++LoRaWAN10SecCnter;
-	enableGPS = LoRaWAN10SecCnter%6 == 0 ? 1 : enableGPS;
+	if(outdoorSensorState == enabled)
+		enableGPS = LoRaWAN10SecCnter%6 == 0 ? 1 : enableGPS;
 	if(!loRaWANStateTransition) loRaWANStateTransition = 1;
 }
 
