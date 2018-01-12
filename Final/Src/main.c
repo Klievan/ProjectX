@@ -1141,23 +1141,25 @@ static void outdoorSensorFSM(){
 				HAL_UART_Transmit_IT(&huart2, "enabling outdoor\r\n", strlen("enabling outdoor\r\n"));
 #endif
 				  /*Configure GPIO pin Output Level high, turn on GPS */
-				  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_SET);
-
-				  /*Configure GPIO pin Output Level high, turn on LoRaWAN module */
-				  //HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET);
+				  //HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_SET);
 				  enableGPS = 1;
 				  GPSState();
+
+				  /*Configure GPIO pin Output Level high, turn on LoRaWAN module */
+				  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET);
+
 
 				outdoorSensorState = enabled;
 				break;
 			case disabling:
 				  /*Configure GPIO pin Output Level high, turn on GPS */
-				  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET);
-
-				  /*Configure GPIO pin Output Level high, turn on LoRaWAN module */
-				  //HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);
+				  //HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET);
 				  enableGPS = 0;
 				  GPSState();
+
+				  /*Configure GPIO pin Output Level high, turn on LoRaWAN module */
+				  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);
+
 
 				  loRaWANState = startup;
 
