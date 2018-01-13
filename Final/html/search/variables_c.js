@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['unsolicited_5fresponse_5fbase',['UNSOLICITED_RESPONSE_BASE',['../constants_8h.html#a6cdbb3665068368b6cb1e7eb72c187e1',1,'constants.h']]]
+  ['systemcoreclock',['SystemCoreClock',['../group___s_t_m32_l1xx___system___private___variables.html#gaa3cd3e43291e81e795d642b79b6088e6',1,'system_stm32l1xx.c']]]
 ];

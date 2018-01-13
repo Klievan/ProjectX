@@ -9,5 +9,6 @@ var searchData=
   ['getcompassdata',['getCompassData',['../main_8c.html#a49d037d32b0bbbc1882efe645618b6ab',1,'main.c']]],
   ['gethardironfault',['getHardIronFault',['../main_8c.html#a17162e72cea6a92bd4ff599e5522d96f',1,'main.c']]],
   ['getmagnetometerdata',['getMagnetometerData',['../main_8c.html#ac42c7257a672ffc59aa277693506988b',1,'main.c']]],
-  ['gpsparsing',['GPSParsing',['../main_8c.html#a96d59cc4b82360ef4366cd9530db4fc6',1,'main.c']]]
+  ['gpsparsing',['GPSParsing',['../main_8c.html#a96d59cc4b82360ef4366cd9530db4fc6',1,'main.c']]],
+  ['gpsstate',['GPSState',['../main_8c.html#a367a21e8d173cf27e65a92dba2369bfb',1,'main.c']]]
 ];

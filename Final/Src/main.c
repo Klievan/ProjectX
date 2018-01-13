@@ -921,6 +921,10 @@ static void get_m_axes(int32_t *pData) {
 	pData[2] = (int32_t) (pDataRaw[2] + (pDataRaw[2] >> 1));
 }
 
+/**
+ * @brief Get raw access data in twos complement
+ * @param pData Pointer to memory location to which the raw axes data is to be written.
+ */
 static void get_m_axes_raw(int16_t *pData) {
 	uint8_t status[1];
 	uint8_t regValue[6] = {[0 ... 5] = 0};

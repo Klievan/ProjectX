@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['sendlorawandata',['sendLoRaWANdata',['../main_8c.html#ac792a67265fc78019b38894098457f3f',1,'main.c']]],
   ['signbitindex',['SignBitIndex',['../enumerations_8h.html#afc2f611defe4cef1809cbf132e402100',1,'enumerations.h']]],
   ['startup',['startup',['../enumerations_8h.html#aa585ee6fc9e868f056bf8b8bc738b7d0a970b937ea7e0cf5e9b13f51d0ea759ba',1,'enumerations.h']]],
   ['stm32l1xx_5fhal_5fconf_2eh',['stm32l1xx_hal_conf.h',['../stm32l1xx__hal__conf_8h.html',1,'']]],

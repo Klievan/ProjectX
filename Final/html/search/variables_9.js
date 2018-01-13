@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['roll',['roll',['../struct_compass_data.html#a84f4d008c2359cdf79660dd35fe5aab4',1,'CompassData']]]
+  ['outdoorsensorstate',['outdoorSensorState',['../main_8c.html#a43bf6afdba7813cd059d3caa71e2b85d',1,'main.c']]]
 ];

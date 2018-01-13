@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['zvalue',['zValue',['../struct_magnetometer_data.html#a2440f0b7677dab319c54433d65a25cdc',1,'MagnetometerData::zValue()'],['../struct_accelerometer_data.html#ad69c15131b094a2e91085e27c7eb56d3',1,'AccelerometerData::zValue()']]]
+  ['xvalue',['xValue',['../struct_magnetometer_data.html#a46734e65667d846c3195846bfbc2e859',1,'MagnetometerData::xValue()'],['../struct_accelerometer_data.html#ad03d23739ee0e9476f8c077c6b01a382',1,'AccelerometerData::xValue()']]]
 ];

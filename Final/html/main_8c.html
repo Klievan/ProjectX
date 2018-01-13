@@ -83,6 +83,8 @@ $(function() {
 </div><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="define-members"></a>
 Macros</h2></td></tr>
+<tr class="memitem:abcb6dfe5aac94a0f5620d897cd37f7a2"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#abcb6dfe5aac94a0f5620d897cd37f7a2">NSERDEBUG</a></td></tr>
+<tr class="separator:abcb6dfe5aac94a0f5620d897cd37f7a2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa3d02f3e6160742836a6273ec37d54b4"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#aa3d02f3e6160742836a6273ec37d54b4">NCOMPASS</a></td></tr>
 <tr class="separator:aa3d02f3e6160742836a6273ec37d54b4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
@@ -134,6 +136,7 @@ Functions</h2></td></tr>
 <tr class="memdesc:aa9f5e65fec65e776ef38c093a2527bf8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get signed and uncompensated axes data from magnetometer.  <a href="#aa9f5e65fec65e776ef38c093a2527bf8">More...</a><br /></td></tr>
 <tr class="separator:aa9f5e65fec65e776ef38c093a2527bf8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa6776b47a46e5a46f0a9c4e900ea8e86"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#aa6776b47a46e5a46f0a9c4e900ea8e86">get_m_axes_raw</a> (int16_t *pData)</td></tr>
+<tr class="memdesc:aa6776b47a46e5a46f0a9c4e900ea8e86"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get raw access data in twos complement.  <a href="#aa6776b47a46e5a46f0a9c4e900ea8e86">More...</a><br /></td></tr>
 <tr class="separator:aa6776b47a46e5a46f0a9c4e900ea8e86"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0a0fd7f8a23a13cb218ea5cc14cedd03"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#a0a0fd7f8a23a13cb218ea5cc14cedd03">get_a_axes</a> (int32_t *pData)</td></tr>
 <tr class="separator:a0a0fd7f8a23a13cb218ea5cc14cedd03"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -168,6 +171,8 @@ Functions</h2></td></tr>
 <tr class="separator:a36c0482a7c87ecebb426205490b3e34c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa3b637e770e42186738d9b878f6e1923"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#aa3b637e770e42186738d9b878f6e1923">D7Parsing</a> ()</td></tr>
 <tr class="separator:aa3b637e770e42186738d9b878f6e1923"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a367a21e8d173cf27e65a92dba2369bfb"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#a367a21e8d173cf27e65a92dba2369bfb">GPSState</a> ()</td></tr>
+<tr class="separator:a367a21e8d173cf27e65a92dba2369bfb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a840291bc02cba5474a4cb46a9b9566fe"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#a840291bc02cba5474a4cb46a9b9566fe">main</a> (void)</td></tr>
 <tr class="separator:a840291bc02cba5474a4cb46a9b9566fe"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac9ed5d6224b5c86f2845a9c1af7d94de"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#ac9ed5d6224b5c86f2845a9c1af7d94de">HAL_RTCEx_WakeUpTimerEventCallback</a> (RTC_HandleTypeDef *<a class="el" href="stm32l1xx__it_8c.html#aa0c7fca836406ade332e1e3f1039d8ab">hrtc</a>)</td></tr>
@@ -202,20 +207,18 @@ Variables</h2></td></tr>
 <tr class="separator:aba449b8c921805afb555390d89a0bdb9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a43bf6afdba7813cd059d3caa71e2b85d"><td class="memItemLeft" align="right" valign="top">static volatile <a class="el" href="enumerations_8h.html#a0aced7dceea6226e2326734fb84541dc">OutdoorSensorState</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#a43bf6afdba7813cd059d3caa71e2b85d">outdoorSensorState</a> = <a class="el" href="enumerations_8h.html#a0aced7dceea6226e2326734fb84541dca18b72413eef3b883fe2e6e15d6373c6d">disabled</a></td></tr>
 <tr class="separator:a43bf6afdba7813cd059d3caa71e2b85d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a48886fd81cffad5ebdd572bbfbda1b5f"><td class="memItemLeft" align="right" valign="top">static volatile uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#a48886fd81cffad5ebdd572bbfbda1b5f">dash7Cmd</a> [16] = &quot;&quot;</td></tr>
-<tr class="separator:a48886fd81cffad5ebdd572bbfbda1b5f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae39d9ed58fb496671d7fb198e38cf7e3"><td class="memItemLeft" align="right" valign="top">static volatile uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#ae39d9ed58fb496671d7fb198e38cf7e3">D7DMABfr</a> [16] = &quot;&quot;</td></tr>
-<tr class="separator:ae39d9ed58fb496671d7fb198e38cf7e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afcb302a60dfdb744a0871bbbd26b92af"><td class="memItemLeft" align="right" valign="top">static volatile <a class="el" href="enumerations_8h.html#aa585ee6fc9e868f056bf8b8bc738b7d0">LoRaWANState</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#afcb302a60dfdb744a0871bbbd26b92af">loRaWANState</a> = <a class="el" href="enumerations_8h.html#aa585ee6fc9e868f056bf8b8bc738b7d0a3e4e604868ccecda5d15573d0b491c77">tx_rx</a></td></tr>
+<tr class="memitem:a8b3b7b85743cb5a84ad3dcfe893019cd"><td class="memItemLeft" align="right" valign="top">static volatile uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#a8b3b7b85743cb5a84ad3dcfe893019cd">dash7Cmd</a> [101] = &quot;&quot;</td></tr>
+<tr class="separator:a8b3b7b85743cb5a84ad3dcfe893019cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3ae1edd3c58eccf1c6c5a4d590fc92db"><td class="memItemLeft" align="right" valign="top">static volatile uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#a3ae1edd3c58eccf1c6c5a4d590fc92db">D7DMABfr</a> [101] = &quot;&quot;</td></tr>
+<tr class="separator:a3ae1edd3c58eccf1c6c5a4d590fc92db"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afcb302a60dfdb744a0871bbbd26b92af"><td class="memItemLeft" align="right" valign="top">static volatile <a class="el" href="enumerations_8h.html#aa585ee6fc9e868f056bf8b8bc738b7d0">LoRaWANState</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#afcb302a60dfdb744a0871bbbd26b92af">loRaWANState</a> = <a class="el" href="enumerations_8h.html#aa585ee6fc9e868f056bf8b8bc738b7d0a970b937ea7e0cf5e9b13f51d0ea759ba">startup</a></td></tr>
 <tr class="separator:afcb302a60dfdb744a0871bbbd26b92af"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a19122ba88f69178b796419485a2e5c4a"><td class="memItemLeft" align="right" valign="top">static char&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#a19122ba88f69178b796419485a2e5c4a">AT_return_code</a> [7] = &quot;&quot;</td></tr>
 <tr class="separator:a19122ba88f69178b796419485a2e5c4a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:acf7f1c6e82d761adc0d38637d342da64"><td class="memItemLeft" align="right" valign="top">static uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#acf7f1c6e82d761adc0d38637d342da64">loRaWANSendCmdAndData</a> [39] = &quot;&quot;</td></tr>
-<tr class="separator:acf7f1c6e82d761adc0d38637d342da64"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2d36ee219e2b3143e61a2c622d2b9e01"><td class="memItemLeft" align="right" valign="top">static uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#a2d36ee219e2b3143e61a2c622d2b9e01">LoRaWANGPSdata</a> [29] = &quot;00;00;.0000|000;00;.0000|0.0&quot;</td></tr>
-<tr class="separator:a2d36ee219e2b3143e61a2c622d2b9e01"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac792a67265fc78019b38894098457f3f"><td class="memItemLeft" align="right" valign="top">static volatile uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#ac792a67265fc78019b38894098457f3f">sendLoRaWANdata</a> = 0</td></tr>
-<tr class="separator:ac792a67265fc78019b38894098457f3f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7f98b6d20d797a437ed2bfc8f5a2de79"><td class="memItemLeft" align="right" valign="top">static uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#a7f98b6d20d797a437ed2bfc8f5a2de79">loRaWANSendCmdAndData</a> [37] = &quot;&quot;</td></tr>
+<tr class="separator:a7f98b6d20d797a437ed2bfc8f5a2de79"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a176d658eec8f48a7c53144e62121300e"><td class="memItemLeft" align="right" valign="top">static uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#a176d658eec8f48a7c53144e62121300e">LoRaWANGPSdata</a> [27] = &quot;00;00.0000|000;00.0000|0.0&quot;</td></tr>
+<tr class="separator:a176d658eec8f48a7c53144e62121300e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7355d85397989e089211c6f025e770c9"><td class="memItemLeft" align="right" valign="top">static volatile uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#a7355d85397989e089211c6f025e770c9">loRaWANStateTransition</a> = 0</td></tr>
 <tr class="separator:a7355d85397989e089211c6f025e770c9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a709aa8025fdb4438268dcb429c631a21"><td class="memItemLeft" align="right" valign="top">static volatile uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#a709aa8025fdb4438268dcb429c631a21">LoRaWAN10SecCnter</a> = 0</td></tr>
@@ -230,6 +233,10 @@ Variables</h2></td></tr>
 <tr class="separator:ad4da1adae3ff0cc2c4e5cd634d719d76"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab55b0b3fa8c78fd33310a12f5a9d49c7"><td class="memItemLeft" align="right" valign="top">static volatile uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#ab55b0b3fa8c78fd33310a12f5a9d49c7">D7dataArrived</a> = 0</td></tr>
 <tr class="separator:ab55b0b3fa8c78fd33310a12f5a9d49c7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3c9085ffb25e5188089326dc22e1aef7"><td class="memItemLeft" align="right" valign="top">static volatile uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#a3c9085ffb25e5188089326dc22e1aef7">enableGPS</a> = 0</td></tr>
+<tr class="separator:a3c9085ffb25e5188089326dc22e1aef7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7766359b11b9e7666d96a397ee86040a"><td class="memItemLeft" align="right" valign="top">static volatile uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="main_8c.html#a7766359b11b9e7666d96a397ee86040a">newLoRaWANData</a> = 0</td></tr>
+<tr class="separator:a7766359b11b9e7666d96a397ee86040a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Macro Definition Documentation</h2>
 <a id="aa3d02f3e6160742836a6273ec37d54b4"></a>
@@ -240,6 +247,20 @@ Variables</h2></td></tr>
       <table class="memname">
         <tr>
           <td class="memname">#define NCOMPASS</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="abcb6dfe5aac94a0f5620d897cd37f7a2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abcb6dfe5aac94a0f5620d897cd37f7a2">&#9670;&nbsp;</a></span>NSERDEBUG</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define NSERDEBUG</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -523,6 +544,14 @@ Variables</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
+<p>Get raw access data in twos complement. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">pData</td><td>Pointer to memory location to which the raw axes data is to be written. </td></tr>
+  </table>
+  </dd>
+</dl>
+
 </div>
 </div>
 <a id="a361a2824024c10bd31b3540adb6158aa"></a>
@@ -674,6 +703,31 @@ Variables</h2></td></tr>
       <table class="memname">
         <tr>
           <td class="memname">static void GPSParsing </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a367a21e8d173cf27e65a92dba2369bfb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a367a21e8d173cf27e65a92dba2369bfb">&#9670;&nbsp;</a></span>GPSState()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">static void GPSState </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td></td>
@@ -1381,8 +1435,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="ae39d9ed58fb496671d7fb198e38cf7e3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae39d9ed58fb496671d7fb198e38cf7e3">&#9670;&nbsp;</a></span>D7DMABfr</h2>
+<a id="a3ae1edd3c58eccf1c6c5a4d590fc92db"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3ae1edd3c58eccf1c6c5a4d590fc92db">&#9670;&nbsp;</a></span>D7DMABfr</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1391,7 +1445,7 @@ Variables</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">volatile uint8_t D7DMABfr[16] = &quot;&quot;</td>
+          <td class="memname">volatile uint8_t D7DMABfr[101] = &quot;&quot;</td>
         </tr>
       </table>
   </td>
@@ -1403,8 +1457,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="a48886fd81cffad5ebdd572bbfbda1b5f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a48886fd81cffad5ebdd572bbfbda1b5f">&#9670;&nbsp;</a></span>dash7Cmd</h2>
+<a id="a8b3b7b85743cb5a84ad3dcfe893019cd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8b3b7b85743cb5a84ad3dcfe893019cd">&#9670;&nbsp;</a></span>dash7Cmd</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1413,7 +1467,29 @@ Variables</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">volatile uint8_t dash7Cmd[16] = &quot;&quot;</td>
+          <td class="memname">volatile uint8_t dash7Cmd[101] = &quot;&quot;</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a3c9085ffb25e5188089326dc22e1aef7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3c9085ffb25e5188089326dc22e1aef7">&#9670;&nbsp;</a></span>enableGPS</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">volatile uint8_t enableGPS = 0</td>
         </tr>
       </table>
   </td>
@@ -1679,8 +1755,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="a2d36ee219e2b3143e61a2c622d2b9e01"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2d36ee219e2b3143e61a2c622d2b9e01">&#9670;&nbsp;</a></span>LoRaWANGPSdata</h2>
+<a id="a176d658eec8f48a7c53144e62121300e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a176d658eec8f48a7c53144e62121300e">&#9670;&nbsp;</a></span>LoRaWANGPSdata</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1689,7 +1765,7 @@ Variables</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">uint8_t LoRaWANGPSdata[29] = &quot;00;00;.0000|000;00;.0000|0.0&quot;</td>
+          <td class="memname">uint8_t LoRaWANGPSdata[27] = &quot;00;00.0000|000;00.0000|0.0&quot;</td>
         </tr>
       </table>
   </td>
@@ -1701,8 +1777,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="acf7f1c6e82d761adc0d38637d342da64"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#acf7f1c6e82d761adc0d38637d342da64">&#9670;&nbsp;</a></span>loRaWANSendCmdAndData</h2>
+<a id="a7f98b6d20d797a437ed2bfc8f5a2de79"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7f98b6d20d797a437ed2bfc8f5a2de79">&#9670;&nbsp;</a></span>loRaWANSendCmdAndData</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1711,7 +1787,7 @@ Variables</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">uint8_t loRaWANSendCmdAndData[39] = &quot;&quot;</td>
+          <td class="memname">uint8_t loRaWANSendCmdAndData[37] = &quot;&quot;</td>
         </tr>
       </table>
   </td>
@@ -1733,7 +1809,7 @@ Variables</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">volatile <a class="el" href="enumerations_8h.html#aa585ee6fc9e868f056bf8b8bc738b7d0">LoRaWANState</a> loRaWANState = <a class="el" href="enumerations_8h.html#aa585ee6fc9e868f056bf8b8bc738b7d0a3e4e604868ccecda5d15573d0b491c77">tx_rx</a></td>
+          <td class="memname">volatile <a class="el" href="enumerations_8h.html#aa585ee6fc9e868f056bf8b8bc738b7d0">LoRaWANState</a> loRaWANState = <a class="el" href="enumerations_8h.html#aa585ee6fc9e868f056bf8b8bc738b7d0a970b937ea7e0cf5e9b13f51d0ea759ba">startup</a></td>
         </tr>
       </table>
   </td>
@@ -1767,8 +1843,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="a43bf6afdba7813cd059d3caa71e2b85d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a43bf6afdba7813cd059d3caa71e2b85d">&#9670;&nbsp;</a></span>outdoorSensorState</h2>
+<a id="a7766359b11b9e7666d96a397ee86040a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7766359b11b9e7666d96a397ee86040a">&#9670;&nbsp;</a></span>newLoRaWANData</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1777,7 +1853,7 @@ Variables</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">volatile <a class="el" href="enumerations_8h.html#a0aced7dceea6226e2326734fb84541dc">OutdoorSensorState</a> outdoorSensorState = <a class="el" href="enumerations_8h.html#a0aced7dceea6226e2326734fb84541dca18b72413eef3b883fe2e6e15d6373c6d">disabled</a></td>
+          <td class="memname">volatile uint8_t newLoRaWANData = 0</td>
         </tr>
       </table>
   </td>
@@ -1789,8 +1865,8 @@ Variables</h2></td></tr>
 
 </div>
 </div>
-<a id="ac792a67265fc78019b38894098457f3f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac792a67265fc78019b38894098457f3f">&#9670;&nbsp;</a></span>sendLoRaWANdata</h2>
+<a id="a43bf6afdba7813cd059d3caa71e2b85d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a43bf6afdba7813cd059d3caa71e2b85d">&#9670;&nbsp;</a></span>outdoorSensorState</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1799,7 +1875,7 @@ Variables</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">volatile uint8_t sendLoRaWANdata = 0</td>
+          <td class="memname">volatile <a class="el" href="enumerations_8h.html#a0aced7dceea6226e2326734fb84541dc">OutdoorSensorState</a> outdoorSensorState = <a class="el" href="enumerations_8h.html#a0aced7dceea6226e2326734fb84541dca18b72413eef3b883fe2e6e15d6373c6d">disabled</a></td>
         </tr>
       </table>
   </td>
