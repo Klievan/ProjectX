@@ -4,7 +4,7 @@
 The program running on the STM32L152RE Nucleo can be found [here](Final).
 
 ## Overview
-Lorem ipsum
+The following chart gives a high-level overview of the system in its entirety. Green arrows indicate communication links of some kind while red and orange arrows indicate power lines of 3.3V and 5V respectively.
 ![Overview chart](https://i.imgur.com/Z7YOUQ6.png)
 
 ## Backend
