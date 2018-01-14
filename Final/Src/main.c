@@ -74,27 +74,24 @@ static int32_t hardIronFault[] = {0, 0, 0}; /**< Test */
 
 
 //Variables used for contextswitching
-static volatile OutdoorSensorState outdoorSensorState = disabled;//state for the outdoor sensors.
-//the uart must first wait for the start of command delimiter \n, then it can receive the command
-static volatile uint8_t dash7Cmd [101] = "";//will contain the command sent over D7, xy\r (x = group = 2, y = bit with devices to enable
-static volatile uint8_t D7DMABfr [101] = "";//these arrays are used for double buffering the D7 data
-// current device mapping is [x x x x x x x GPS] (only gps pretty much)
+static volatile OutdoorSensorState outdoorSensorState = disabled;/**<contains the outdoor state*/
+static volatile uint8_t dash7Cmd [101] = "";/**<buffer that can store 2 Dash7 commands*/
+static volatile uint8_t D7DMABfr [101] = "";/**<buffer used to double buffer the Dash7 command*/
 
 //Variables used for GPS and LoRaWAN
-static volatile LoRaWANState loRaWANState = startup;
-static char AT_return_code[7] = "";//contains the AT_return_code
-//must be reset to all \0 using memset after every use
-static uint8_t loRaWANSendCmdAndData[37] = "";// AT send cmd + LoRaWANGPSdata = 31 bytes (including null terminator)
-static uint8_t LoRaWANGPSdata[27] = "00;00.0000|000;00.0000|0.0";//LoRaWAN GPS data, is 9 characters lat, 10 characters lon and pipe seperator + \0 = 21, parsed from GPSdata
-static volatile uint8_t loRaWANStateTransition = 0;// set to 1 when the LoRaWAN FSM may (possibly) change states
-static volatile uint8_t LoRaWAN10SecCnter = 0;//counter that gets incremented every time the RTX wakes up. This is to make sure a LoRaWAN message is only sent every 60 sec
-static volatile uint8_t GPSdata[153] = "";// raw GPS data, contains at least 1 whole GPS string
-static volatile uint8_t GPSDMABfr[153] = "";//these registers are used for double buffering the GPS data
-static volatile uint8_t GPSdataArrived = 0;
-static volatile uint8_t LoRaWANdataArrived = 0;
-static volatile uint8_t D7dataArrived = 0;
-static volatile uint8_t enableGPS = 0;
-static volatile uint8_t newLoRaWANData = 0;
+static volatile LoRaWANState loRaWANState = startup;/**<contains the LoRaWAN state*/
+static char AT_return_code[7] = "";/**<buffer that stores the AT return codes from the LoRaWAN module*/
+static uint8_t loRaWANSendCmdAndData[37] = "";/**<AT send cmd + LoRaWANGPSdata = 31 bytes (including null terminator)*/
+static uint8_t LoRaWANGPSdata[27] = "00;00.0000|000;00.0000|0.0";/**<LoRaWAN GPS data latitude|longitude|HDOP*/
+static volatile uint8_t loRaWANStateTransition = 0;/**<gets set to 1 when the LoRaWAN FSM may change state*/
+static volatile uint8_t LoRaWAN10SecCnter = 0;/**<counts 10 seconds so flags can be set at other intervals eg 30, 60 seconds*/
+static volatile uint8_t GPSdata[153] = "";/**<buffers raw GPS data, is as large as 2 whole commands*/
+static volatile uint8_t GPSDMABfr[153] = "";/**<used to double buffer the raw GPS data*/
+static volatile uint8_t GPSdataArrived = 0;/**<Set to 1 when raw GPS data is available */
+static volatile uint8_t LoRaWANdataArrived = 0;/**<Set to 1 when a LoRaWAN return code is received*/
+static volatile uint8_t D7dataArrived = 0;/**<Set to 1 when a command is received over Dash7*/
+static volatile uint8_t enableGPS = 0;/**<Set to 1 when the GPS module may be enabled*/
+static volatile uint8_t newLoRaWANData = 0;/**<Set to 1 when new, valid GPS data is parsed from the raw GPS data*/
 
 /* USER CODE END PV */
 
@@ -126,18 +123,18 @@ static void get_a_axes_raw(int16_t *pData);
 static void enterStopMode(uint32_t regulator);
 static void enterSleepMode(uint32_t regulator);
 static void getHardIronFault();
-static uint8_t joinLoRaWANnetwork();//must be called to join LoRaWAN network
-static uint8_t transmitLoRaWANData(uint8_t*);//used to transmit data with AT commands
+static uint8_t joinLoRaWANnetwork();
+static uint8_t transmitLoRaWANData(uint8_t*);
 static uint8_t verifyLoRaNetworkjoin();
-static void outdoorSensorFSM();//function call that cycles through the outdoor FSM (LoRaWAN and GPS)
-static void uart1DMAConfig();//configures DMA1 Channel 5, which is wired to the UART1_RX request line
-static void uart1DMAStart();//launched DMA task of receiving one byte
+static void outdoorSensorFSM();
+static void uart1DMAConfig();
+static void uart1DMAStart();
 static void uart4DMAConfig();
 static void uart4DMAStart();
-static void GPSParsing();//parses GPS data
+static void GPSParsing();
 static void LoRaWANParsing();
 static void D7Parsing();
-static void GPSState();//turns on gps when Enable GPS is true
+static void GPSState();
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -185,8 +182,8 @@ int main(void)
   HAL_PWREx_EnableLowPowerRunMode();
 
   /* configure DMA for UART 1*/
-  uart1DMAConfig();//config the DMA used by uart1
-  uart1DMAStart();//start DMA reception on this uart
+  uart1DMAConfig();
+  uart1DMAStart();
   uart4DMAConfig();
   uart4DMAStart();
 
@@ -1025,166 +1022,160 @@ void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc) {
 	if(!loRaWANStateTransition) loRaWANStateTransition = 1;
 }
 
+/**
+ * @brief Transmit AT+JOIN command to LoRaWAN modem and sets up receive of return value
+ *
+ * This function issues the AT+JOIN command to the LoRaWAN modem, prompting it to join
+ * the LoRaWAN network. An interrupt driven receive is started to receive the response
+ * of the modem.
+ *
+ * @return 0 is always returned
+ */
 static uint8_t joinLoRaWANnetwork(){
-	//if (HAL_UART_GetState(&huart5)==HAL_UART_STATE_READY){
 		__HAL_UART_FLUSH_DRREGISTER(&huart5);
-		HAL_UART_Receive_IT(&huart5, (uint8_t*)AT_return_code,6);//receiving with interrupts just doesn't make sense here
-		//HAL_UART_Transmit_IT(&huart5, (uint8_t*)AT_join_cmd, strlen(AT_join_cmd));//strlen excludes \0 so it's ok
-		HAL_UART_Transmit(&huart5, (uint8_t*)AT_join_cmd, strlen(AT_join_cmd), HAL_MAX_DELAY);//strlen excludes \0 so it's ok
+		HAL_UART_Receive_IT(&huart5, (uint8_t*)AT_return_code,6);
+		HAL_UART_Transmit(&huart5, (uint8_t*)AT_join_cmd, strlen(AT_join_cmd), HAL_MAX_DELAY);
 		return 0;
-		//if the UART was not busy, the command is being sent;
-		//verify success once receive is done.
-	//}
-	//else return 1;
-		// else the UART is busy with another operation, hold off
 }
 
+/**
+ * @brief Transmit AT+NJS=? command to LoRaWAN modem and sets up receive of return value
+ *
+ * This function issues the AT+NJS command to the LoRaWAN modem, prompting it to return
+ * the network status. An interrupt driven receive is started to receive the reponse of
+ * the modem.
+ *
+ * @return 0 is always returned
+ */
 static uint8_t verifyLoRaNetworkjoin(){
-	//if (HAL_UART_GetState(&huart5)==HAL_UART_STATE_READY){
 		__HAL_UART_FLUSH_DRREGISTER(&huart5);
 		HAL_UART_Receive_IT(&huart5, (uint8_t*)AT_return_code, 3);
-		//HAL_UART_Transmit_IT(&huart5, (uint8_t*)AT_NJS_cmd, strlen(AT_NJS_cmd));//strlen excludes \0 so it's ok
-		HAL_UART_Transmit(&huart5, (uint8_t*)AT_NJS_cmd, strlen(AT_NJS_cmd), HAL_MAX_DELAY);//strlen excludes \0 so it's ok
+		HAL_UART_Transmit(&huart5, (uint8_t*)AT_NJS_cmd, strlen(AT_NJS_cmd), HAL_MAX_DELAY);
 		return 0;
-		//if the UART was not busy, the command is being sent;
-		//verify success once receive is done.
-	//}
-	//else return 1;
-	// else the UART is busy, retry later
 }
 
+
+/**
+ * @brief Transmits AT+SEND command including data to LoRaWAN modem
+ *
+ * This function issues the AT+SEND command with data to the LoRaWAN modem, prompting it to
+ * send a message with the included data.
+ *
+ * @param data The data to be transmitted
+ * @return 0 is always returned
+ */
 static uint8_t transmitLoRaWANData(uint8_t* data){
-	//if (HAL_UART_GetState(&huart5)==HAL_UART_STATE_READY){
 		/*if (loRaWANSendCmdAndData != NULL)
 			free(loRaWANSendCmdAndData);
 		loRaWANSendCmdAndData = (char*)malloc((strlen(data)+strlen(AT_SEND_cmd)+2)*sizeof(char));
 		strncpy(loRaWANSendCmdAndData, AT_SEND_cmd, 10);
 		strncpy(&loRaWANSendCmdAndData[10], data, strlen(data));
 		strcpy(&loRaWANSendCmdAndData[strlen(data)+strlen(AT_SEND_cmd)], "\r\n");
+
+		This ^malloc method was equally correct, however when debugging I thought it was the cause of
+		trouble so I rewrote this. It wasn't the cause though.
 		*/
 		strcpy(loRaWANSendCmdAndData, AT_SEND_cmd);
 		strcpy(&loRaWANSendCmdAndData[strlen(AT_SEND_cmd)], data);
 		strcpy(&loRaWANSendCmdAndData[strlen(AT_SEND_cmd)+strlen(data)], "\r\n");
 		__HAL_UART_FLUSH_DRREGISTER(&huart5);
-		//HAL_UART_Transmit(&huart2, "starting transmit", strlen("starting transmit"), HAL_MAX_DELAY);
-		//HAL_UART_Receive_IT(&huart5, (uint8_t*)AT_return_code,6);
-		//HAL_UART_Transmit_IT(&huart5, loRaWANSendCmdAndData, strlen(loRaWANSendCmdAndData));
 		HAL_UART_Transmit(&huart5, loRaWANSendCmdAndData, strlen(loRaWANSendCmdAndData), HAL_MAX_DELAY);
-		//HAL_UART_Transmit(&huart2, "verifying return code", strlen("verifying return code"), HAL_MAX_DELAY);
-		//if these are equal the network was joined succesfully
 		return 0;
-	//}
-	//else return 1;
-	//return 1 is either UART busy, or one of the other possible return values of LoRaWAN Modem
 }
 
-static void outdoorSensorFSM(){
+/**
+ * @brief FSM for the Outdoor State, states: disabled, enabled, enabling, disabling
+ *
+ * Switch statement that executes functions depending on the current outdoor state.
+ * disbabled: do nothing
+ * enabled: Run through LoRaWAN FSM
+ * enabling: enable LoRaWAN module and GPS
+ * disabled: disbale LoRaWAN module and GPS
+ *
+ */
+static void outdoorSensorFSM() {
 
 	switch (outdoorSensorState) {
-			case disabled:
-				break;
-			case enabled:
-				//when outdoor is enabled, the GPS has power, so we need to parse whatever it sends
-				//GPSParsing();
-				//then we can go thorugh the LoRaWAN states to possibly send the GPS data over.
-				if(loRaWANStateTransition == 1){
-					switch (loRaWANState) {
-					case startup:
-						loRaWANState = joining_network; //set state to joining network
-	#ifndef NSERDEBUG
-						HAL_UART_Transmit(&huart2, "starting connection\n\r", strlen("starting connection\n"), HAL_MAX_DELAY);
-	#endif
-						break;
-					case joining_network:
-	#ifndef NSERDEBUG
-						HAL_UART_Transmit(&huart2, "trying to join network\n\r", strlen("trying to joing network\n\r"), HAL_MAX_DELAY);
-	#endif
-						joinLoRaWANnetwork();
-						//loRaWANState = wait_for_joining_network;//next state normally is to wait for wait_for_joinging_network
-						//if (joinLoRaWANnetwork() == 1)
-						//	loRaWANState = joining_network;//however if previous command returns with error we must retry
-						break;
-					case verify_network_join:
-	#ifndef NSERDEBUG
-						HAL_UART_Transmit(&huart2, "verifying network join\n", strlen("verifying network join\n\r"), HAL_MAX_DELAY);
-	#endif
-						verifyLoRaNetworkjoin();
-						//loRaWANState = wait_for_verify_network_join;
-						//if(verifyLoRaNetworkjoin() == 1)
-						//	loRaWANState = verify_network_join;//same reasoning here
-						break;
-					case joined_network:
-	#ifndef NSERDEBUG
-						HAL_UART_Transmit(&huart2, "transmitting data\n\r", strlen("transmitting data\n\r"), HAL_MAX_DELAY);
-	#endif
-						loRaWANState = tx_rx;
-							/*
-							if(transmitLoRaWANData((uint8_t*) LoRaWANdata) == 1)
-								loRaWANState = joined_network;
-							sendLoRaWANdata = 0;
-							*/
-						break;
-					case tx_rx:
-						// tx_rx indicates the uart is currently transmitting or waiting for reception
-
-						if(newLoRaWANData){
-							transmitLoRaWANData(LoRaWANGPSdata);
-							newLoRaWANData = 0;
-						}
-
-						// only tries to send a message every 60 seconds, otherwise the LoRaWAN modem has to buffer too much data
-					default:
-						break;
-					}
-					loRaWANStateTransition = 0;
-				}
-
-				// insert GPS state loop here
-				break;
-			case enabling:
+	case disabled:
+		break;
+	case enabled:
+		if (loRaWANStateTransition == 1) {
+			switch (loRaWANState) {
+			case startup:
+				loRaWANState = joining_network; //set state to joining network
 #ifndef NSERDEBUG
-				HAL_UART_Transmit_IT(&huart2, "enabling outdoor\r\n", strlen("enabling outdoor\r\n"));
+				HAL_UART_Transmit(&huart2, "starting connection\n\r", strlen("starting connection\n"), HAL_MAX_DELAY);
 #endif
-				  /*Configure GPIO pin Output Level high, turn on GPS */
-				  //HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_SET);
-				  enableGPS = 1;
-				  GPSState();
-
-				  /*Configure GPIO pin Output Level high, turn on LoRaWAN module */
-				  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET);
-
-
-				outdoorSensorState = enabled;
 				break;
-			case disabling:
-				  /*Configure GPIO pin Output Level high, turn on GPS */
-				  //HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET);
-				  enableGPS = 0;
-				  GPSState();
-
-				  /*Configure GPIO pin Output Level high, turn on LoRaWAN module */
-				  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);
-
-
-				  loRaWANState = startup;
-
-				  /*deinit LoRaWAN uart*/
-				  //HAL_UART_DeInit(&huart5);
-
-				  /* deinit GPS uart */
-				  //MX_USART1_UART_Init();
-				  /* configure DMA for UART 1*/
-				  //uart1DMAConfig();//config the DMA used by uart1 not sure how to deinit the DMA here
-				  //uart1DMAStart();//start DMA reception on this uart
-
-				outdoorSensorState = disabled;
+			case joining_network:
+#ifndef NSERDEBUG
+				HAL_UART_Transmit(&huart2, "trying to join network\n\r", strlen("trying to joing network\n\r"), HAL_MAX_DELAY);
+#endif
+				joinLoRaWANnetwork();
 				break;
+			case verify_network_join:
+#ifndef NSERDEBUG
+				HAL_UART_Transmit(&huart2, "verifying network join\n", strlen("verifying network join\n\r"), HAL_MAX_DELAY);
+#endif
+				verifyLoRaNetworkjoin();
+				break;
+			case joined_network:
+#ifndef NSERDEBUG
+				HAL_UART_Transmit(&huart2, "transmitting data\n\r", strlen("transmitting data\n\r"), HAL_MAX_DELAY);
+#endif
+				loRaWANState = tx_rx;
+				break;
+			case tx_rx:
+				// newLoRaWANData is true when valid GPS data has been parsed. Occurs at most once every 60 seconds
+				if (newLoRaWANData) {
+					transmitLoRaWANData(LoRaWANGPSdata);
+					newLoRaWANData = 0;
+				}
 			default:
 				break;
 			}
+			loRaWANStateTransition = 0;
+		}
+		break;
+	case enabling:
+#ifndef NSERDEBUG
+		HAL_UART_Transmit_IT(&huart2, "enabling outdoor\r\n", strlen("enabling outdoor\r\n"));
+#endif
+		/*Configure GPIO pin Output Level high, turn on GPS */
+		enableGPS = 1;
+		GPSState();
+
+		/*Configure GPIO pin Output Level high, turn on LoRaWAN module */
+		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET);
+
+		outdoorSensorState = enabled;
+		break;
+	case disabling:
+		/*Configure GPIO pin Output Level high, turn on GPS */
+		;
+		enableGPS = 0;
+		GPSState();
+
+		/*Configure GPIO pin Output Level high, turn on LoRaWAN module */
+		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);
+
+		loRaWANState = startup;
+		outdoorSensorState = disabled;
+		break;
+	default:
+		break;
+	}
 
 }
 
+/**
+ * @brief UART Rx complete callback, called when an interrupt or DMA Rx completes
+ *
+ * This function is called when an interrupt or DMA Uart receive operation completes.
+ * Depending on the uart that generated the callback, different flags are set.
+ *
+ * @param UartHandle pointer to interrupt generating uart
+ */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle){
 	//callback on receive complete, might be usefull later on
 	if (UartHandle == &huart2){
@@ -1205,6 +1196,11 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle){
 
 }
 
+/**
+ * @brief uart1 DMA configuration, configures the DMA as circular
+ *
+ * This function configures the DMA reception of data for uart1 (GPS).
+ */
 static void uart1DMAConfig(){
 	//Configure the DMA1 Channel 5, which is wired to the UART2_RX request line
 	hdma_usart1_rx.Instance = DMA1_Channel5;
@@ -1227,10 +1223,21 @@ static void uart1DMAConfig(){
 	HAL_NVIC_EnableIRQ(USART1_IRQn);
 }
 
+/**
+ * @brief starts circular DMA reception of data on uart 1.
+ *
+ * This function starts circular DMA reception of data on uart 1.
+ * Data is written to GPSDMABfr.
+ */
 static void uart1DMAStart(){
 	HAL_UART_Receive_DMA(&huart1, GPSDMABfr, 152);
 }
 
+/**
+ * @brief uart4 DMA configuration, configures the DMA as circular
+ *
+ * This function configures the DMA reception of data for uart4 (Dash7).
+ */
 static void uart4DMAConfig(){
 	hdma_uart4_rx.Instance = DMA2_Channel3;
 	hdma_uart4_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;
@@ -1247,10 +1254,26 @@ static void uart4DMAConfig(){
 	HAL_NVIC_SetPriority(UART4_IRQn, 0,0);
 	HAL_NVIC_EnableIRQ(UART4_IRQn);
 }
+
+/**
+ * @brief starts circular DMA reception of data on uart 4.
+ *
+ * This function starts circular DMA reception of data on uart 4.
+ * Data is written to GPSDMABfr.
+ */
 static void uart4DMAStart(){
 	HAL_UART_Receive_DMA(&huart4, D7DMABfr, 100);
 }
 
+/**
+ * @brief parses incoming GPS data for latitude, longitude and HDOP
+ *
+ * When data is received by the DMA controller and the buffer is full,
+ * it gets copied to a different buffer and this function can be executed
+ * as GPSdataArrived flag will be set. The function parses the raw GPS data
+ * and formats the parsed data so it can be send over LoRaWAN. When valid data
+ * has been parsed, the GPS module is turned off.
+ */
 static void GPSParsing(){
 	if(GPSdataArrived == 1){
 		if(outdoorSensorState == enabled){
@@ -1332,6 +1355,13 @@ static void GPSParsing(){
 	}
 }
 
+/**
+ * @brief When joining the LoRaWAN network, the returning commands must be parsed here.
+ *
+ * When issueing commands to the LoRaWAN module, it can be of use to parse the returning
+ * data from the LoRaWAN module. Depending on the last issued command, this function
+ * parses this data and if the data is ok, the LoRaWAN FSM can transition to new states.
+ */
 static void LoRaWANParsing(){
 	if(LoRaWANdataArrived == 1){
 	switch(loRaWANState){
@@ -1343,8 +1373,7 @@ static void LoRaWANParsing(){
 					loRaWANState = verify_network_join;
 					//if the command was unseccessful, it will be retried next main iteration
 					//if the command was successful, we go to verification of network join
-				} /*else
-					loRaWANState = joining_network;*/
+				}
 				memset(AT_return_code, 0, sizeof(AT_return_code)/sizeof(char));
 				//memset resets the AT_return_code
 				break;
@@ -1356,28 +1385,25 @@ static void LoRaWANParsing(){
 					//if the return value of verify_network_join is 1, we joined the network
 					//else the join has not been completed (but is in progress)
 				}
-				/*else
-					loRaWANState = verify_network_join;*/
 				memset(AT_return_code, 0, sizeof(AT_return_code)/sizeof(char));
 				//again, reset the AT_return_buffer after complete
 				break;
 			case joined_network: break;
-			/*case tx_rx:
-				if (strcmp(AT_return_code,"\r\nOK\r\n")==0){
-					HAL_UART_Transmit_IT(&huart2, "transmit_done", strlen("transmit_done"));
-					//if the return code is OK the modem will take care of the rest of the
-					//transmission, so we're fine
-					//else the something went wrong, we can try again next main iteration
-				}
-				loRaWANState = joined_network;
-				memset(AT_return_code, 0, sizeof(AT_return_code)/sizeof(char));
-				//memset resets the AT_return_code
-				break;*/
 			default: break;
 			}
 	LoRaWANdataArrived = 0;
 	}
 }
+
+/**
+ * @brief parses incoming Dash7 data for outdoor enable/disable commands
+ *
+ * When data is received from the DMA controller for the Dash7 module,
+ * this data must be parsed as it may contain commands to turn on or off the
+ * outdoor sensors. Because the Dash7 module sends \0 characters at times,
+ * those are removed before parsing, as they would interfere with the C strstr
+ * functionality.
+ */
 static void D7Parsing(){
 	if(D7dataArrived == 1){
 			//insert loop that replaces every occurence of \0 with 0x61 (small a)
@@ -1407,6 +1433,12 @@ static void D7Parsing(){
 	}
 }
 
+
+/**
+ * @brief enables the GPS module when the enableGPS flag is set, otherwise turns off GPS
+ *
+ * Enables the GPS module when the enableGPS flag is set, otherwise turns off GPS.
+ */
 static void GPSState(){
 	if(enableGPS){
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_SET);
