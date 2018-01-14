@@ -14,7 +14,8 @@ The following chart gives a high-level overview of the system in its entirety. G
 
 ## Power
 
-![Imgur](https://i.imgur.com/YsSOBOx.png)
+![LoRa Benchmark](https://i.imgur.com/YsSOBOx.png)
+![D7 Benchmark](https://i.imgur.com/p6ZXHSL.png)
 
 ## Code conventions
 Eclipse default:
