@@ -1,7 +1,7 @@
 # ProjectX
 
 ## Final
-[test](Final)
+The program running on the STM32L152RE Nucleo can be found [here](Final).
 
 ## Overview
 Lorem ipsum
