@@ -35,8 +35,8 @@ def debug(message):
         print(bcolors.OKBLUE + "\n[DEBUG] " + message + bcolors.ENDC)
 
 
+# Sends an RPC command to the dash7 gateways
 def execute_rpc_command(device_id, json_alp_cmd):
-    #cmd = {"method": "execute-alp-async", "params": jsonpickle.encode(json_alp_cmd), "timeout": 500}
     cmd = {"method": "execute-alp-async", "params": jsonpickle.encode(json_alp_cmd), "timeout": 500}
     path_params = {'deviceId': device_id}
     query_params = {}
@@ -56,6 +56,7 @@ def execute_rpc_command(device_id, json_alp_cmd):
                                async=False)
 
 
+# Sends an RPC_call to the gateways to either enable or disable the GPS
 def set_gps(GPS):
     characters = [0x80, 0x81]  # 0 = GPS off -> 0x30, 1 = GPS on -> 0x31
     cmd = Command.create_with_return_file_data_action(0x40, [0x0A, 0x32, characters[GPS], 0X0D], InterfaceType.D7ASP,
