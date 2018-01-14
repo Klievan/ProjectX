@@ -13,7 +13,7 @@ The following chart gives a high-level overview of the system in its entirety. G
 ![Backend flowchart](https://i.imgur.com/xDnhAh0.png)
 
 ## LoRa/AtSlave
-This is a folder containing an exisiting AT-Slave provided by STM. To use the code in the project, only the appropriate IDs and keys had to be entered in Commisioning.h. We recommend downloading the latest version here when configuring a new AT-Slave: [I-CUBE-LRWAN LoRaWAN software expansion for STM32Cube](http://www.st.com/en/embedded-software/i-cube-lrwan.html).
+This is a folder containing an exisiting AT-Slave provided by STM. To use the code in the project, only the appropriate IDs and keys had to be entered in Commisioning.h. We recommend downloading the latest version when configuring a new AT-Slave: [I-CUBE-LRWAN LoRaWAN software expansion for STM32Cube](http://www.st.com/en/embedded-software/i-cube-lrwan.html).
 
 ## Power
 
