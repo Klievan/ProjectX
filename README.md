@@ -13,6 +13,6 @@ Lorem ipsum
 
 ## Code conventions
 Eclipse default:
-* haakjes achter functie
-* Lower Camelcase voor functie
+* Parenthesis after function headers (not below)
+* Lower Camelcase for functions
 * Constants all caps & underscores
