@@ -8,11 +8,17 @@
 #ifndef ENUMERATIONS_H_
 #define ENUMERATIONS_H_
 
+/**
+ * @brief Position of sign bit in two's complement number.
+ */
 typedef enum {
 	TWOS_COMPLEMENT_24_BIT = 24,
 	TWOS_COMPLEMENT_16_BIT = 16,
 } SignBitIndex;
 
+/**
+ * @brief Type of frame tail.
+ */
 typedef enum {
 	FLOOD_FRAME,
 	COMPASS_FRAME,
@@ -21,6 +27,7 @@ typedef enum {
 	ACCELEROMETER_FRAME,
 	TEMPERATURE_FRAME,
 } UnsolicitedResponseType;
+
 typedef enum{
 	startup,
 	joining_network,

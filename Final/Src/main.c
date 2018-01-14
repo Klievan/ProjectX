@@ -68,7 +68,7 @@ DMA_HandleTypeDef hdma_usart1_rx;
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 static volatile uint8_t TRANSMITTING = 0;
-static int32_t hardIronFault[] = {0, 0, 0}; /**< Test */
+static int32_t hardIronFault[] = {0, 0, 0};
 
 //Variables used for LoRaWAN
 
@@ -191,6 +191,13 @@ int main(void)
   HAL_I2C_Mem_Write(&hi2c1,LPS22HB_ADDR,LPS22HB_CTRL_REG1,I2C_MEMADD_SIZE_8BIT,&REG_VALUE,1,HAL_MAX_DELAY);
   while(HAL_I2C_IsDeviceReady(&hi2c1,LPS22HB_ADDR,1,HAL_MAX_DELAY) != HAL_OK);
 
+  /*
+   * In continuous mode the device continuously performs measurements and places the result
+   * in the data register.The data-ready signal is generated when a new data set is ready to
+   * be read. When the SOFT_RST bit is set, the configuration registers and user registers
+   * are reset but flash registers keep their values. In idle mode, only I2C and SPI are active.
+   * Furthermore we enable the low power mode.
+   */
   REG_VALUE = LSM303_MAG_SOFT_RST | LSM303_MAG_LPEN | LSM303_MAG_ODR_10HZ | LSM303_MAG_MD_IDLE;
   HAL_I2C_Mem_Write(&hi2c1,LSM303_MAG_ADDR,LSM303_MAG_CFG_REGA,I2C_MEMADD_SIZE_8BIT,&REG_VALUE,1,HAL_MAX_DELAY);
   while (HAL_I2C_IsDeviceReady(&hi2c1,LSM303_MAG_ADDR,1,HAL_MAX_DELAY) != HAL_OK);
@@ -199,6 +206,12 @@ int main(void)
   HAL_I2C_Mem_Write(&hi2c1,LSM303_MAG_ADDR,LSM303_MAG_CFG_REGB,I2C_MEMADD_SIZE_8BIT,&REG_VALUE,1,HAL_MAX_DELAY);
   while (HAL_I2C_IsDeviceReady(&hi2c1,LSM303_MAG_ADDR,1,HAL_MAX_DELAY) != HAL_OK);
 
+  /*
+   * If BDU is enabled, reading of incorrect data is avoided when the user reads asynchronously.
+   * In fact if the read request arrives during an update of the output data, a latch is
+   * possible, reading incoherent high and low parts of the same register. Only one part is
+   * updated and the other one remains old.
+   */
   REG_VALUE = LSM303_MAG_BDU;
   HAL_I2C_Mem_Write(&hi2c1,LSM303_MAG_ADDR,LSM303_MAG_CFG_REGC,I2C_MEMADD_SIZE_8BIT,&REG_VALUE,1,HAL_MAX_DELAY);
   while (HAL_I2C_IsDeviceReady(&hi2c1,LSM303_MAG_ADDR,1,HAL_MAX_DELAY) != HAL_OK);
@@ -932,6 +945,7 @@ static void get_m_axes_raw(int16_t *pData) {
 	HAL_I2C_Mem_Write(&hi2c1,LSM303_MAG_ADDR,LSM303_MAG_CFG_REGA,I2C_MEMADD_SIZE_8BIT,&REG_VALUE,1,HAL_MAX_DELAY);
 	while (HAL_I2C_IsDeviceReady(&hi2c1,LSM303_MAG_ADDR,1,HAL_MAX_DELAY) != HAL_OK);
 
+	// wait until new data is available
 	do
 		HAL_I2C_Mem_Read(&hi2c1,LSM303_MAG_ADDR,LSM303_MAG_SREG,I2C_MEMADD_SIZE_8BIT,status,1,100);
 	while(!CHECK_BIT(*status,LSM303_MAG_XYZDA));
@@ -941,6 +955,7 @@ static void get_m_axes_raw(int16_t *pData) {
 	HAL_I2C_Mem_Write(&hi2c1,LSM303_MAG_ADDR,LSM303_MAG_CFG_REGA,I2C_MEMADD_SIZE_8BIT,&REG_VALUE,1,HAL_MAX_DELAY);
 	while (HAL_I2C_IsDeviceReady(&hi2c1,LSM303_MAG_ADDR,1,HAL_MAX_DELAY) != HAL_OK);
 
+	// read registers
 	HAL_I2C_Mem_Read(&hi2c1,LSM303_MAG_ADDR,LSM303_MAG_X_L,I2C_MEMADD_SIZE_8BIT,&regValue[0],1,100);
 	HAL_I2C_Mem_Read(&hi2c1,LSM303_MAG_ADDR,LSM303_MAG_X_H,I2C_MEMADD_SIZE_8BIT,&regValue[1],1,100);
 	HAL_I2C_Mem_Read(&hi2c1,LSM303_MAG_ADDR,LSM303_MAG_Y_L,I2C_MEMADD_SIZE_8BIT,&regValue[2],1,100);
@@ -1000,6 +1015,17 @@ static void get_a_axes_raw(int16_t *pData) {
 	pData[2] = regValueInt16[2];
 }
 
+/**
+ * @brief Enter stop mode.
+ *
+ * This function suspends the systick interrupt generation and enters
+ * stop mode with a WFI instruction. The type of stop mode can be
+ * configured by passing the desired state of the main regulator. When
+ * the device wakes up because an interrupt occured, the systick is
+ * enabled once again and this function returns.
+ *
+ * @param regulator Desired state of main regulator.
+ */
 static void enterStopMode(uint32_t regulator) {
 	HAL_SuspendTick();
 	__HAL_RCC_PWR_CLK_ENABLE();
@@ -1007,6 +1033,17 @@ static void enterStopMode(uint32_t regulator) {
 	HAL_ResumeTick();
 }
 
+/**
+ * @brief Enter sleep mode.
+ *
+ * This function suspends the systick interrupt generation and enters
+ * sleep mode with a WFI instruction. The type of sleep mode can be
+ * configured by passing the desired state of the main regulator. When
+ * the device wakes up because an interrupt occured, the systick is
+ * enabled once again and this function returns.
+ *
+ * @param regulator Desired state of main regulator.
+ */
 static void enterSleepMode(uint32_t regulator) {
 	HAL_SuspendTick();
 	__HAL_RCC_PWR_CLK_ENABLE();
@@ -1014,6 +1051,9 @@ static void enterSleepMode(uint32_t regulator) {
 	HAL_ResumeTick();
 }
 
+/**
+ * @brief Callback of the RTC wake-up timer interrupt.
+ */
 void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc) {
 	if(!TRANSMITTING) TRANSMITTING = 1;
 	++LoRaWAN10SecCnter;
