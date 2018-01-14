@@ -1,7 +1,7 @@
 # ProjectX
 
 ## Final
-![test](Final)
+[test](Final)
 
 ## Overview
 Lorem ipsum
