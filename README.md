@@ -17,6 +17,9 @@ The following chart gives a high-level overview of the system in its entirety. G
 ![LoRa Benchmark](https://i.imgur.com/YsSOBOx.png)
 ![D7 Benchmark](https://i.imgur.com/p6ZXHSL.png)
 
+## LoRa/AtSlave
+This is a folder containing an exisiting AT-Slave provided by STM. To use the code in the project, only Commisiong.h in the includes folder had to be altered. In this file the necessary keys and IDs can be entered. Drivers and middlewares needed to compile the project can be found in the [I-CUBE-LRWAN LoRaWAN software expansion for STM32Cube](http://www.st.com/en/embedded-software/i-cube-lrwan.html).
+
 ## Code conventions
 Eclipse default:
 * Parenthesis after function headers (not below)
