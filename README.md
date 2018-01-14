@@ -1,7 +1,7 @@
 # ProjectX
 
 ## Final
-The program running on the STM32L152RE Nucleo can be found [here](Final). The project works with the SW4STM32 Eclipse plugin.
+The program running on the STM32L152RE Nucleo can be found [here](Final). The project works with the SW4STM32 plugin for Eclipse and was generated using STM32CubeMX.
 
 ## Overview
 The following chart gives a high-level overview of the system in its entirety. Green arrows indicate communication links of some kind while red and orange arrows indicate power lines of 3.3V and 5V respectively. The arrow heads indicate the direction in which current/information flows. Labels provide additional information about the power lines as well as the comm links. Specifically, in case of the latter, the labels indicate the type of comm link.
