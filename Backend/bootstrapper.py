@@ -63,7 +63,7 @@ def set_gps(GPS):
                                                       D7Config(
                                                           addressee=Addressee(access_class=0x11, id_type=IdType.NOID)))
 
-    execute_rpc_command("43e01b20-b967-11e7-bebc-85e6dd10a2e8", cmd)
+    execute_rpc_command("<gateway ID>", cmd)
     debug("GPS was set to " + str(GPS) + " through RPC")
     push_to_tb({"gps": GPS})
     for i in range(0, 20):
@@ -72,10 +72,6 @@ def set_gps(GPS):
                                                           D7Config(
                                                               addressee=Addressee(access_class=0x11,
                                                                                   id_type=IdType.NOID)))
-        execute_rpc_command("43e01b20-b967-11e7-bebc-85e6dd10a2e8", cmd)
-        execute_rpc_command("f1f7e740-b8b0-11e7-bebc-85e6dd10a2e8", cmd)
-        execute_rpc_command("b6b48ad0-b95a-11e7-bebc-85e6dd10a2e8", cmd)
-        execute_rpc_command("427ab180-f79e-11e7-8c87-85e6dd10a2e8", cmd)
         time.sleep(0.5)
 
 
@@ -92,7 +88,7 @@ def init_api():
     api_client_config = Configuration()
     api_client_config.host = "http://thingsboard.idlab.uantwerpen.be:8080"
     api_client_config.api_key[
-        'X-Authorization'] = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJzdHVkZW50QGxvcG93LWNvYXctbGFiLnVhbnR3ZXJwZW4uYmUiLCJzY29wZXMiOlsiVEVOQU5UX0FETUlOIl0sInVzZXJJZCI6IjZjYzYzZTQwLWNhY2MtMTFlNy05ZjFiLTg1ZTZkZDEwYTJlOCIsImVuYWJsZWQiOnRydWUsImlzUHVibGljIjpmYWxzZSwidGVuYW50SWQiOiJmNTliMDU4MC1iNTA5LTExZTctYWIxYS04NWU2ZGQxMGEyZTgiLCJjdXN0b21lcklkIjoiMTM4MTQwMDAtMWRkMi0xMWIyLTgwODAtODA4MDgwODA4MDgwIiwiaXNzIjoidGhpbmdzYm9hcmQuaW8iLCJpYXQiOjE1MTU1MTAzOTEsImV4cCI6MTUyNDUxMDM5MX0.Nriym2JgmXVKB0VnkV58B9aiTm7SOwpJI3g52Nq_Lr7sHEhZIyMGUzYUV5fXBN8jOmxhi8B8igFeOzIf82nkOg"
+        'X-Authorization'] = "<Thingsboard API key>"
     api_client_config.api_key_prefix['X-Authorization'] = 'Bearer'
     api_client = ApiClient(api_client_config)
     return api_client;
@@ -164,7 +160,7 @@ def push_to_tb(data):
 #   Init the MQTT-client
 def init_mqtt():
     client = mqtt.Client(protocol=mqtt.MQTTv31)
-    client.username_pw_set("student", "cv1Dq6GXL9cqsStSHKp5")
+    client.username_pw_set("<MQTT username>", "<MQTT password>")
     client.connect("backend.idlab.uantwerpen.be", 1883, 60)
     client.subscribe("/localisation/#")
     client.subscribe("/loriot/#")
