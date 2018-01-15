@@ -87,6 +87,7 @@ static volatile uint8_t loRaWANStateTransition = 0;/**<gets set to 1 when the Lo
 static volatile uint8_t LoRaWAN10SecCnter = 0;/**<counts 10 seconds so flags can be set at other intervals eg 30, 60 seconds*/
 static volatile uint8_t GPSdata[153] = "";/**<buffers raw GPS data, is as large as 2 whole commands*/
 static volatile uint8_t GPSDMABfr[153] = "";/**<used to double buffer the raw GPS data*/
+static volatile uint8_t GPSLock = 0;/**<used to prevent access when double buffer is being read*/
 static volatile uint8_t GPSdataArrived = 0;/**<Set to 1 when raw GPS data is available */
 static volatile uint8_t LoRaWANdataArrived = 0;/**<Set to 1 when a LoRaWAN return code is received*/
 static volatile uint8_t D7dataArrived = 0;/**<Set to 1 when a command is received over Dash7*/
@@ -1228,8 +1229,10 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle){
 		D7dataArrived = 1;// mark data as arrived
 	} else if(UartHandle == &huart1){
 		__HAL_UART_FLUSH_DRREGISTER(&huart1);// flush DDR to prevent overrun while we execute the next two commands
-		memcpy(GPSdata, GPSDMABfr, 152);// copy content to new buffer
-		GPSdataArrived = 1;// mark data as arrived
+		if(!GPSLock){
+			memcpy(GPSdata, GPSDMABfr, 152);// copy content to new buffer
+			GPSdataArrived = 1;// mark data as arrived
+		}
 	} else {
 		//insert code here
 	}
@@ -1316,6 +1319,7 @@ static void uart4DMAStart(){
  */
 static void GPSParsing(){
 	if(GPSdataArrived == 1){
+		GPSLock = 1;
 		if(outdoorSensorState == enabled){
 			//Variables to temporary hold latitude and longitude;
 			uint8_t latitude[10] = "";
@@ -1392,6 +1396,7 @@ static void GPSParsing(){
 		}
 		memset(GPSdata, 0, sizeof(GPSdata)/sizeof(uint8_t));//reset the double buffer to all 0
 		GPSdataArrived = 0;//reset the data arrived flag
+		GPSLock = 0;
 	}
 }
 
